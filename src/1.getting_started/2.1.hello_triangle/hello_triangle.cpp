@@ -6,7 +6,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void checkShaderCompileStatus(unsigned int shader, bool isVertexShader);
-void checkShaderLinkStatus(unsigned int program;
+void checkShaderLinkStatus(unsigned int program);
 
 // settings
 const unsigned int SCR_WIDTH = 1024;
@@ -84,7 +84,6 @@ int main()
 	glDeleteShader(fragmentShader);
 
 
-
 	// set up vertex data
 	const float vertices[] = {
 		-0.5f,  -0.5f,  0.0f,
@@ -92,12 +91,27 @@ int main()
 		0.0f,   0.5f,   0.0f
 	};
 
+	// VBO
 	unsigned int VBO;
 	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
+	// VAO
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
+
+	// 1. binding
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	
+
+	// 2. set vertex attrib pointer
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	//unbind
+	//glBindVertexArray(NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, NULL);
+
 
 	// render loop
 	// -----------
@@ -111,11 +125,21 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+
+
+	// free resources
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteProgram(shaderProgram);
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------

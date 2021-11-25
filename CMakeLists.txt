@@ -66,10 +66,10 @@ set(CHAPTERS
 set(1.getting_started
     1.1.hello_window
     2.1.hello_triangle
-#    2.2.hello_triangle_indexed
-#    2.3.hello_triangle_exercise1
-#    2.4.hello_triangle_exercise2
-#    2.5.hello_triangle_exercise3
+    2.2.hello_triangle_indexed
+    2.3.hello_triangle_exercise1
+    2.4.hello_triangle_exercise2
+    2.5.hello_triangle_exercise3
 #    3.1.shaders_uniform
 #    3.2.shaders_interpolation
 #    3.3.shaders_class
