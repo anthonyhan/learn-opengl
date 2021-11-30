@@ -12,7 +12,7 @@ void checkShaderLinkStatus(unsigned int program);
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
-const char* vertexShaderSource[2] = { 
+const char* vertexShaderSource[2] = {
 "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
 "void main()\n"
@@ -41,7 +41,7 @@ const char* fragmentShaderSource[2] = {
 "void main()\n"
 "{\n"
 "   FragColor = vec4(1.0f, 1.0f, 0.2f, 1.0f);\n"
-"}\n\0"};
+"}\n\0" };
 
 int main()
 {
@@ -78,7 +78,7 @@ int main()
 
 	// build and compile our shader program
 	// -----------------------------------------
-	
+
 	unsigned int shaderPrograms[2];
 	for (size_t i = 0; i < 2; ++i)
 	{
@@ -108,16 +108,18 @@ int main()
 
 
 	// set up vertex data
-	const float vertices[] = {
-		0.5f, 0.5f, 0.0f,   // 右上角
-		0.5f, -0.5f, 0.0f,  // 右下角
-		-0.5f, -0.5f, 0.0f, // 左下角
-		-0.5f, 0.5f, 0.0f   // 左上角
+	const float vertices[] =
+	{
+		0.5f, 0.5f, 0.0f,   // TopRight
+		0.5f, -0.5f, 0.0f,  // BottomRight
+		-0.5f, -0.5f, 0.0f, // BottomLeft
+		-0.5f, 0.5f, 0.0f   // TopLeft
 	};
 
-	unsigned int indices[] = { // 注意索引从0开始! 
-	0, 1, 3, // 第一个三角形
-	1, 2, 3  // 第二个三角形
+	unsigned int indices[] =	
+	{
+		0, 1, 3, // first triangle
+		1, 2, 3  // second triangle
 	};
 
 
@@ -169,7 +171,7 @@ int main()
 
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		
+
 		glUseProgram(shaderPrograms[0]);
 		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, NULL);
 
@@ -186,7 +188,7 @@ int main()
 	// free resources
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	for(size_t i=0; i<2;++i)
+	for (size_t i = 0; i < 2; ++i)
 		glDeleteProgram(shaderPrograms[i]);
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.

@@ -6,8 +6,6 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
-void checkShaderCompileStatus(unsigned int shader, bool isVertexShader);
-void checkShaderLinkStatus(unsigned int program);
 
 // settings
 const unsigned int SCR_WIDTH = 1024;
@@ -155,30 +153,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
-}
-
-void checkShaderCompileStatus(unsigned int shader, bool isVertexShader)
-{
-	int success;
-	char infoLog[512];
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-	if (!success)
-	{
-		glGetShaderInfoLog(shader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::" << (isVertexShader ? "VERTEX" : "FRAGMENT") << "::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-}
-
-void checkShaderLinkStatus(unsigned int program)
-{
-	int success;
-	char infoLog[512];
-	glGetProgramiv(program, GL_LINK_STATUS, &success);
-
-	if (!success)
-	{
-		glGetProgramInfoLog(program, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infoLog << std::endl;
-	}
 }
