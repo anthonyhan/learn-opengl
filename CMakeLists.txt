@@ -85,9 +85,10 @@ set(1.getting_started
     5.1.transformations
     5.2.transformations_exercise1
     5.3.transformations_exercise2
-#    6.1.coordinate_systems
-#    6.2.coordinate_systems_depth
-#    6.3.coordinate_systems_multiple
+    6.1.coordinate_systems
+    6.2.coordinate_systems_depth
+    6.3.coordinate_systems_multiple
+    6.4.coordinate_systems_exercise1
 #    7.1.camera_circle
 #    7.2.camera_keyboard_dt
 #    7.3.camera_mouse_zoom
@@ -179,8 +180,31 @@ include_directories(${CMAKE_BINARY_DIR}/configuration)
 # set_target_properties(STB_IMAGE PROPERTIES LINKER_LANGUAGE C_STANDARD)
 # set(LIBS ${LIBS} STB_IMAGE)
 
+# GLAD
 add_library(GLAD "src/glad.c")
 set(LIBS ${LIBS} GLAD)
+
+# IMGUI
+set(IMGUI_DIR "include/imgui")
+add_library(IMGUI STATIC)
+target_sources( IMGUI
+                PRIVATE
+                    ${IMGUI_DIR}/imgui_demo.cpp
+                    ${IMGUI_DIR}/imgui_draw.cpp
+                    ${IMGUI_DIR}/imgui_tables.cpp
+                    ${IMGUI_DIR}/imgui_widgets.cpp
+                    ${IMGUI_DIR}/imgui.cpp
+
+                PRIVATE
+                    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+                    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+                )
+
+target_include_directories( IMGUI
+                            PUBLIC ${IMGUI_DIR}
+                            PUBLIC ${IMGUI_DIR}/backends
+                            )
+set(LIBS ${LIBS} IMGUI)
 
 macro(makeLink src dest target)
   add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dest}  DEPENDS  ${dest} COMMENT "mklink ${src} -> ${dest}")
