@@ -16,14 +16,26 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+// settings
+const unsigned int SCR_WIDTH = 1024;
+const unsigned int SCR_HEIGHT = 768;
+
+typedef struct SUIData
+{
+	float fov = glm::radians(45.0f);
+	float aspect_ratio = (float)SCR_WIDTH / SCR_HEIGHT;
+	float near = 0.1f;
+	float far = 100.0f;
+} SUIData;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char* texPath, GLint format, bool flipY);
 void initIMGUI(GLFWwindow* window);
+void onRenderImGui(SUIData& data);
 
-// settings
-const unsigned int SCR_WIDTH = 1024;
-const unsigned int SCR_HEIGHT = 768;
+
+
 
 int main()
 {
@@ -65,7 +77,7 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader shader("6.3.shader.vs", "6.3.shader.fs");
+	Shader shader("6.4.shader.vs", "6.4.shader.fs");
 
 
 	// set up vertex data
@@ -174,6 +186,7 @@ int main()
 	shader.setMat4("projection", projection);
 
 	bool show_demo_window = true;
+	static SUIData data;
 
 	// render loop
 	// -----------
@@ -191,7 +204,7 @@ int main()
 		//shader.use();
 		//projection = glm::perspective((float)((sin(glfwGetTime())+1.0f)*0.5f)*glm::radians(180.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		float ratio = (sin(glfwGetTime()) + 1.0f);
-		projection = glm::perspective(glm::radians(90.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+		projection = glm::perspective(data.fov, data.aspect_ratio, data.near, data.far);
 		shader.setMat4("projection", projection);
 
 		size_t count = sizeof(cubePositions) / sizeof(glm::vec3);
@@ -220,14 +233,16 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
+		//if (show_demo_window)
+		//	ImGui::ShowDemoWindow(&show_demo_window);
+
+		onRenderImGui(data);
 
 		// Rendering
 		ImGui::Render();
-		int display_w, display_h;
-		glfwGetFramebufferSize(window, &display_w, &display_h);
-		glViewport(0, 0, display_w, display_h);
+		//int display_w, display_h;
+		//glfwGetFramebufferSize(window, &display_w, &display_h);
+		//glViewport(0, 0, display_w, display_h);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -330,4 +345,22 @@ void initIMGUI(GLFWwindow* window)
 	bool show_demo_window = true;
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+}
+
+void onRenderImGui(SUIData& data)
+{
+	static bool open = false;
+
+	if (!ImGui::Begin("Config", &open, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::End();
+		return;
+	}
+
+	ImGui::SliderAngle("FOV", &data.fov, 0.0f, 360.0f);
+	ImGui::SliderFloat("Aspect-ratio", &data.aspect_ratio, 0.0f, 2.0f);
+	ImGui::SliderFloat("Near Plane", &data.near, 0.1f, 10.0f);
+	ImGui::SliderFloat("Far Plane", &data.far, 10.0f, 100.0f);
+
+	ImGui::End();
 }
