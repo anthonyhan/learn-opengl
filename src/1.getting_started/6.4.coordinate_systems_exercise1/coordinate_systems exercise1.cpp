@@ -20,22 +20,21 @@
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
-typedef struct SUIData
+typedef struct ui_params
 {
 	float fov = glm::radians(45.0f);
 	float aspect_ratio = (float)SCR_WIDTH / SCR_HEIGHT;
 	float near = 0.1f;
 	float far = 100.0f;
-} SUIData;
+} ui_params;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char* texPath, GLint format, bool flipY);
-void initIMGUI(GLFWwindow* window);
-void onRenderImGui(SUIData& data);
 
-
-
+void imgui_on_init(GLFWwindow* window);
+void imgui_on_render(ui_params& param);
+void imgui_on_deinit(GLFWwindow* window);
 
 int main()
 {
@@ -70,7 +69,7 @@ int main()
 		return -1;
 	}
 
-	initIMGUI(window);
+	imgui_on_init(window);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -186,7 +185,7 @@ int main()
 	shader.setMat4("projection", projection);
 
 	bool show_demo_window = true;
-	static SUIData data;
+	static ui_params param;
 
 	// render loop
 	// -----------
@@ -202,9 +201,7 @@ int main()
 
 		// use shader program
 		//shader.use();
-		//projection = glm::perspective((float)((sin(glfwGetTime())+1.0f)*0.5f)*glm::radians(180.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-		float ratio = (sin(glfwGetTime()) + 1.0f);
-		projection = glm::perspective(data.fov, data.aspect_ratio, data.near, data.far);
+		projection = glm::perspective(param.fov, param.aspect_ratio, param.near, param.far);
 		shader.setMat4("projection", projection);
 
 		size_t count = sizeof(cubePositions) / sizeof(glm::vec3);
@@ -212,8 +209,8 @@ int main()
 		{
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, cubePositions[i]);
-			float angle = 20.0f * i;
-			model = glm::rotate(model, (float)glfwGetTime()* glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			float angle = (float)glfwGetTime() * glm::radians(20.0f * i);
+			model = glm::rotate(model, angle , glm::vec3(1.0f, 0.3f, 0.5f));
 			shader.setMat4("model", model);
 
 			// draw
@@ -224,26 +221,9 @@ int main()
 
 			glBindVertexArray(VAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
-
 		}
 
-
-		// Start the Dear ImGui frame
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		//if (show_demo_window)
-		//	ImGui::ShowDemoWindow(&show_demo_window);
-
-		onRenderImGui(data);
-
-		// Rendering
-		ImGui::Render();
-		//int display_w, display_h;
-		//glfwGetFramebufferSize(window, &display_w, &display_h);
-		//glViewport(0, 0, display_w, display_h);
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		imgui_on_render(param);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
@@ -258,6 +238,8 @@ int main()
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
+	imgui_on_deinit(window);
+	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
 }
@@ -309,7 +291,7 @@ unsigned int loadTexture(const char* texPath, GLint format, bool flipY)
 	return texture;
 }
 
-void initIMGUI(GLFWwindow* window)
+void imgui_on_init(GLFWwindow* window)
 {
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -340,15 +322,18 @@ void initIMGUI(GLFWwindow* window)
 	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
 	//ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 	//IM_ASSERT(font != NULL);
-
-	// Our state
-	bool show_demo_window = true;
-	bool show_another_window = false;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
-void onRenderImGui(SUIData& data)
+void imgui_on_render(ui_params& param)
 {
+	// Start the Dear ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	//if (show_demo_window)
+	//	ImGui::ShowDemoWindow(&show_demo_window);
+
 	static bool open = false;
 
 	if (!ImGui::Begin("Config", &open, ImGuiWindowFlags_AlwaysAutoResize))
@@ -357,10 +342,26 @@ void onRenderImGui(SUIData& data)
 		return;
 	}
 
-	ImGui::SliderAngle("FOV", &data.fov, 0.0f, 360.0f);
-	ImGui::SliderFloat("Aspect-ratio", &data.aspect_ratio, 0.0f, 2.0f);
-	ImGui::SliderFloat("Near Plane", &data.near, 0.1f, 10.0f);
-	ImGui::SliderFloat("Far Plane", &data.far, 10.0f, 100.0f);
+	ImGui::SliderAngle("FOV", &param.fov, 0.0f, 360.0f);
+	ImGui::SliderFloat("Aspect-ratio", &param.aspect_ratio, 0.0f, 2.0f);
+	ImGui::SliderFloat("Near Plane", &param.near, 0.1f, 10.0f);
+	ImGui::SliderFloat("Far Plane", &param.far, 10.0f, 100.0f);
 
 	ImGui::End();
+
+	// Rendering
+	ImGui::Render();
+	//int display_w, display_h;
+	//glfwGetFramebufferSize(window, &display_w, &display_h);
+	//glViewport(0, 0, display_w, display_h);
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+}
+
+void imgui_on_deinit(GLFWwindow* window)
+{
+	// Cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }
