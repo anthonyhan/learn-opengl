@@ -23,10 +23,12 @@ const unsigned int SCR_HEIGHT = 768;
 typedef struct ui_params
 {
 	float speed = 2.5f;
+	float mouse_sensitivity = 0.05f;
 } ui_params;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char* texPath, GLint format, bool flipY);
 
@@ -35,11 +37,18 @@ void imgui_on_render(ui_params& param);
 void imgui_on_deinit(GLFWwindow* window);
 
 static ui_params params;
+float pitch = 0.0f, yaw = -90.0f;
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraFront = glm::vec3((cos(glm::radians(pitch)) * cos(glm::radians(yaw))), sin(glm::radians(pitch)), (cos(glm::radians(pitch)) * sin(glm::radians(yaw))));
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float deltaTime = 0.0f; 
 float lastFrame = 0.0f;
+
+
+float lastX = SCR_WIDTH * 0.5f;
+float lastY = SCR_HEIGHT * 0.5f;
+static bool firstMouse = true;
+
 
 int main()
 {
@@ -63,8 +72,12 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -81,7 +94,7 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader shader("7.2.shader.vs", "7.2.shader.fs");
+	Shader shader("7.1.shader.vs", "7.1.shader.fs");
 
 
 	// set up vertex data
@@ -261,6 +274,19 @@ void processInput(GLFWwindow* window)
 		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * speed;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * speed;
+
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		glfwSetCursorPosCallback(window, NULL);
+	}
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPosCallback(window, mouse_callback);
+		firstMouse = true;
+
+	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -270,6 +296,39 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse) // 这个bool变量初始时是设定为true的
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	xoffset *= params.mouse_sensitivity;
+	yoffset *= params.mouse_sensitivity;
+
+	pitch += yoffset;
+	yaw += xoffset;
+
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	else if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	front.y = sin(glm::radians(pitch));
+	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+	cameraFront = glm::normalize(front);
+
 }
 
 unsigned int loadTexture(const char* texPath, GLint format, bool flipY)
@@ -353,14 +412,23 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
-	ImGui::SliderFloat("speed", &param.speed, 1.0f, 10.0f);
+	ImGui::SliderFloat("move speed", &param.speed, 1.0f, 10.0f);
+	ImGui::SliderFloat("mouse sensitivity", &param.mouse_sensitivity, 0.01f, 1.0f);
 	if (ImGui::Button("Reset"))
 	{
 		cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+		pitch = 0.0f, yaw = -90.0f;
+		glm::vec3 cameraFront = glm::vec3((cos(glm::radians(pitch)) * cos(glm::radians(yaw))), sin(glm::radians(pitch)), (cos(glm::radians(pitch)) * sin(glm::radians(yaw))));
 		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		params.speed = 2.5f;
+		params.mouse_sensitivity = 0.05f;
 	}
+
+	ImGui::Text("pitch: %.2f", pitch);
+	ImGui::Text("yaw: %.2f", yaw);
+	ImGui::Text("Press 1 to show cursor");
+	ImGui::Text("Press 2 to hide cursor");
 
 	ImGui::End();
 
