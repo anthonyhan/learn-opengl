@@ -94,7 +94,9 @@ set(1.getting_started
     7.1.camera_circle
     7.2.camera_keyboard_dt
     7.3.camera_mouse_zoom
-#    7.4.camera_class
+    7.4.camera_class
+    7.5.camera_class_exercise1
+    7.6.camera_class_exercise2
 )
 
 set(2.lighting

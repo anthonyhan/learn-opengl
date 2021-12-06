@@ -16,15 +16,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "custom_camera.h"
+
 // settings
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
-	float speed = 2.5f;
-	float mouse_sensitivity = 0.05f;
-	float fov = 45.0f;
 } ui_params;
 
 
@@ -39,14 +38,10 @@ void imgui_on_render(ui_params& param);
 void imgui_on_deinit(GLFWwindow* window);
 
 static ui_params params;
-float pitch = 0.0f, yaw = -90.0f;
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3((cos(glm::radians(pitch)) * cos(glm::radians(yaw))), sin(glm::radians(pitch)), (cos(glm::radians(pitch)) * sin(glm::radians(yaw))));
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-float deltaTime = 0.0f; 
+float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-
+CustomCamera camera = CustomCamera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH * 0.5f;
 float lastY = SCR_HEIGHT * 0.5f;
 static bool firstMouse = true;
@@ -97,7 +92,7 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader shader("7.3.shader.vs", "7.3.shader.fs");
+	Shader shader("7.6.shader.vs", "7.6.shader.fs");
 
 
 	// set up vertex data
@@ -211,10 +206,10 @@ int main()
 		// use shader program
 		//shader.use();
 
-		glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+		glm::mat4 view = camera.GetViewMatrix();
 		shader.setMat4("view", view);
 
-		glm::mat4 projection = glm::perspective(glm::radians(params.fov), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		shader.setMat4("projection", projection);
 
 		size_t count = sizeof(cubePositions) / sizeof(glm::vec3);
@@ -223,7 +218,7 @@ int main()
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, cubePositions[i]);
 			float angle = glm::radians(20.0f * i);
-			model = glm::rotate(model, angle , glm::vec3(1.0f, 0.3f, 0.5f));
+			model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
 			shader.setMat4("model", model);
 
 			// draw
@@ -267,16 +262,15 @@ void processInput(GLFWwindow* window)
 	float currentFrame = (float)glfwGetTime();
 	deltaTime = currentFrame - lastFrame;
 	lastFrame = currentFrame;
-	float speed = params.speed * deltaTime;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cameraPos += speed * cameraFront;
+		camera.ProcessKeyboard(CustomCamera_Movement::FORWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		cameraPos -= speed * cameraFront;
+		camera.ProcessKeyboard(CustomCamera_Movement::BACKWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * speed;
+		camera.ProcessKeyboard(CustomCamera_Movement::LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * speed;
+		camera.ProcessKeyboard(CustomCamera_Movement::RIGHT, deltaTime);
 
 	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
 	{
@@ -288,7 +282,6 @@ void processInput(GLFWwindow* window)
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetCursorPosCallback(window, mouse_callback);
 		firstMouse = true;
-
 	}
 }
 
@@ -315,33 +308,12 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	lastX = xpos;
 	lastY = ypos;
 
-	xoffset *= params.mouse_sensitivity;
-	yoffset *= params.mouse_sensitivity;
-
-	pitch += yoffset;
-	yaw += xoffset;
-
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	else if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	glm::vec3 front;
-	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
-	front.y = sin(glm::radians(pitch));
-	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-	cameraFront = glm::normalize(front);
-
+	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	if(params.fov >= 1.0f && params.fov <= 45.0f)
-		params.fov -= yoffset;
-	if (params.fov <= 1.0f)
-		params.fov = 1.0f;
-	if (params.fov >= 45.0f)
-		params.fov = 45.0f;
+	camera.ProcessMouseScroll(yoffset);
 }
 
 unsigned int loadTexture(const char* texPath, GLint format, bool flipY)
@@ -425,24 +397,19 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
-	ImGui::SliderFloat("move speed", &param.speed, 1.0f, 10.0f);
-	ImGui::SliderFloat("mouse sensitivity", &param.mouse_sensitivity, 0.01f, 1.0f);
+	ImGui::SliderFloat("move speed", &camera.MovementSpeed, 1.0f, 10.0f);
+	ImGui::SliderFloat("mouse sensitivity", &camera.MouseSensitivity, 0.01f, 1.0f);
 	if (ImGui::Button("Reset"))
 	{
-		cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-		pitch = 0.0f, yaw = -90.0f;
-		glm::vec3 cameraFront = glm::vec3((cos(glm::radians(pitch)) * cos(glm::radians(yaw))), sin(glm::radians(pitch)), (cos(glm::radians(pitch)) * sin(glm::radians(yaw))));
-		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		params.speed = 2.5f;
-		params.mouse_sensitivity = 0.05f;
+		camera = CustomCamera(glm::vec3(0.0f, 0.0f, 3.0f));
 	}
 
-	ImGui::Text("pitch: %.2f", pitch);
-	ImGui::Text("yaw: %.2f", yaw);
-	ImGui::Text("fov: %.2f", params.fov);
+	ImGui::Text("pitch: %.2f", camera.Pitch);
+	ImGui::Text("yaw: %.2f", camera.Yaw);
+	ImGui::Text("fov: %.2f", camera.Zoom);
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");
+	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
 	ImGui::End();
 
