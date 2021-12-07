@@ -91,8 +91,8 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader cubeShader("1.colors.vs", "1.colors.fs");
-	Shader lightingShader("1.lighting.vs", "1.lighting.fs");
+	Shader lightingShader("1.colors.vs", "1.colors.fs");
+	Shader lightCubeShader("1.light_cube.vs", "1.light_cube.fs");
 
 
 	// set up vertex data
@@ -140,18 +140,7 @@ int main()
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
 
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f,  0.0f,  0.0f),
-		//glm::vec3(2.0f,  5.0f, -15.0f),
-		// glm::vec3(-1.5f, -2.2f, -2.5f),
-		// glm::vec3(-3.8f, -2.0f, -12.3f),
-		// glm::vec3(2.4f, -0.4f, -3.5f),
-		// glm::vec3(-1.7f,  3.0f, -7.5f),
-		// glm::vec3(1.3f, -2.0f, -2.5f),
-		// glm::vec3(1.5f,  2.0f, -2.5f),
-		// glm::vec3(1.5f,  0.2f, -1.5f),
-		// glm::vec3(-1.3f,  1.0f, -1.5f)
-	};
+	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 	// VBO
 	unsigned int VBO;
@@ -183,10 +172,6 @@ int main()
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), (void*)(3 * sizeof(GL_FLOAT)));
 	glEnableVertexAttribArray(1);
 
-	// load and create texture
-	unsigned int texture1 = loadTexture("res/textures/container.jpg", GL_RGB, false);
-	unsigned int texture2 = loadTexture("res/textures/awesomeface.png", GL_RGBA, true);
-
 	//unbind
 	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, NULL); // No need to unbind EBO, GL_ELEMENT_ARRAY_BUFFER binding is part of the VAO state, it will automatically be unbound when VAO is unbound.
 	//glBindVertexArray(NULL);	// No need to unbind VAO since VAO will be bound before it's used.
@@ -212,33 +197,32 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Rendering Light
 		// use shader program
-		//shader.use();
-
-		glm::mat4 view = camera.GetViewMatrix();
-		shader.setMat4("view", view);
-
+		lightingShader.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-		shader.setMat4("projection", projection);
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 model = glm::mat4(1.0f);
 
-		size_t count = sizeof(cubePositions) / sizeof(glm::vec3);
-		for (size_t i = 0; i < count; ++i)
-		{
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, cubePositions[i]);
-			float angle = glm::radians(20.0f * i);
-			model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-			shader.setMat4("model", model);
+		lightingShader.setMat4("projection", projection);
+		lightingShader.setMat4("view", view);
+		lightingShader.setMat4("model", model);
 
-			// draw
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture1);
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, texture2);
+		glBindVertexArray(cubeVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-			glBindVertexArray(cubeVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
+		// Rendering Cube
+		lightCubeShader.use();
+		lightCubeShader.setMat4("projection", projection);
+		lightCubeShader.setMat4("view", view);
+
+		model = glm::translate(glm::mat4(1.0f), lightPos);
+		model = glm::scale(model, glm::vec3(0.2f));
+		lightCubeShader.setMat4("model", model);
+
+		glBindVertexArray(lightVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
 		imgui_on_render(params);
 
@@ -280,18 +264,6 @@ void processInput(GLFWwindow* window)
 		camera.ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
-
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-	{
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		glfwSetCursorPosCallback(window, NULL);
-	}
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-	{
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		glfwSetCursorPosCallback(window, mouse_callback);
-		firstMouse = true;
-	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -305,7 +277,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse) // ���bool������ʼʱ���趨Ϊtrue��
+	if (firstMouse)
 	{
 		lastX = xpos;
 		lastY = ypos;
@@ -400,33 +372,19 @@ void imgui_on_render(ui_params& param)
 
 	static bool open = false;
 
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 	if (!ImGui::Begin("Config", &open, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::End();
 		return;
 	}
 
-	ImGui::SliderFloat("move speed", &camera.MovementSpeed, 1.0f, 10.0f);
-	ImGui::SliderFloat("mouse sensitivity", &camera.MouseSensitivity, 0.01f, 1.0f);
-	if (ImGui::Button("Reset"))
-	{
-		camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-	}
-
-	ImGui::Text("pitch: %.2f", camera.Pitch);
-	ImGui::Text("yaw: %.2f", camera.Yaw);
-	ImGui::Text("fov: %.2f", camera.Zoom);
-	ImGui::Text("Press 1 to show cursor");
-	ImGui::Text("Press 2 to hide cursor");
 	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
 	ImGui::End();
 
 	// Rendering
 	ImGui::Render();
-	//int display_w, display_h;
-	//glfwGetFramebufferSize(window, &display_w, &display_h);
-	//glViewport(0, 0, display_w, display_h);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 }
