@@ -181,7 +181,6 @@ int main()
 	lightingShader.use();
 	lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 	lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-	lightingShader.setVec3("lightPos", lightPos);
 
 	glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), lightPos);
 	lightModel = glm::scale(lightModel, glm::vec3(0.2f));
@@ -205,11 +204,13 @@ int main()
 		lightingShader.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+
+		glm::mat4 viewLightPos = glm::translate(view, lightPos);
+		lightingShader.setVec3("lightPos", viewLightPos[3]);
 		
 		lightingShader.setMat4("projection", projection);
 		lightingShader.setMat4("view", view);
 		lightingShader.setMat4("model", cubeModel);
-		lightingShader.setVec3("viewPos", camera.Position);
 		
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
