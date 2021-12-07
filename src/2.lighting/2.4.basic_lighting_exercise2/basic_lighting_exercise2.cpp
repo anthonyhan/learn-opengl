@@ -23,6 +23,10 @@ const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
+	float lightAngle = 0.0f;
+	float ambientStrength = 0.1f;
+	float specularStrength = 0.5f;
+	int specularShininess = 32;
 } ui_params;
 
 
@@ -91,8 +95,8 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader lightingShader("2.2.basic_lighting.vs", "2.2.basic_lighting.fs");
-	Shader lightCubeShader("2.2.light_cube.vs", "2.2.light_cube.fs");
+	Shader lightingShader("2.4.basic_lighting.vs", "2.4.basic_lighting.fs");
+	Shader lightCubeShader("2.4.light_cube.vs", "2.4.light_cube.fs");
 
 
 	// set up vertex data
@@ -181,13 +185,9 @@ int main()
 	lightingShader.use();
 	lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 	lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-	lightingShader.setVec3("lightPos", lightPos);
-
-	glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), lightPos);
-	lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-
+	
 	glm::mat4 cubeModel = glm::mat4(1.0f);
-
+	
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
@@ -200,28 +200,38 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Rendering Light
-		// use shader program
-		lightingShader.use();
+		lightingShader.setFloat("ambientStrength", params.ambientStrength);
+		lightingShader.setFloat("specularStrength", params.specularStrength);
+		lightingShader.setInt("specularShininess", params.specularShininess);
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		
-		lightingShader.setMat4("projection", projection);
-		lightingShader.setMat4("view", view);
-		lightingShader.setMat4("model", cubeModel);
-		lightingShader.setVec3("viewPos", camera.Position);
-		
-		glBindVertexArray(cubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Rendering Cube
 		lightCubeShader.use();
+		glm::mat4 lightModel = glm::mat4(1.0f);
+		lightModel = glm::rotate(lightModel, glm::radians(params.lightAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+		lightModel = glm::translate(lightModel, lightPos);
+		lightModel = glm::scale(lightModel, glm::vec3(0.2f));
 		lightCubeShader.setMat4("projection", projection);
 		lightCubeShader.setMat4("view", view);
 		lightCubeShader.setMat4("model", lightModel);
 
 		glBindVertexArray(lightVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// Rendering Light
+		// use shader program
+		lightingShader.use();
+		lightingShader.setMat4("projection", projection);
+		lightingShader.setMat4("view", view);
+		lightingShader.setMat4("model", cubeModel);
+		lightingShader.setVec3("viewPos", camera.Position);
+		lightingShader.setVec3("lightPos", lightModel[3]); // 4th column, Position Vec of Mat4
+
+		glBindVertexArray(cubeVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		
 
 		imgui_on_render(params);
 
@@ -263,6 +273,17 @@ void processInput(GLFWwindow* window)
 		camera.ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		glfwSetCursorPosCallback(window, NULL);
+	}
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPosCallback(window, mouse_callback);
+		firstMouse = true;
+	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -378,6 +399,18 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
+	ImGui::SliderFloat("Light", &params.lightAngle, 0.0f, 360.0f);
+	ImGui::SliderFloat("Ambient", &params.ambientStrength, 0.0f, 1.0f);
+	ImGui::SliderFloat("Specular", &params.specularStrength, 0.0f, 1.0f);
+	static int num = -1;
+	if(num<0)
+		num = log2(params.specularShininess);
+	if (ImGui::SliderInt("Shininess", &num, 1, 8))
+	{
+		params.specularShininess = pow(2, num);
+	}
+	ImGui::Text("Press 1 to show cursor");
+	ImGui::Text("Press 2 to hide cursor");
 	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
 	ImGui::End();

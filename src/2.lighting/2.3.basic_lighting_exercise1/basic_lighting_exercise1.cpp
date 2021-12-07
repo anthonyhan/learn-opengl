@@ -91,8 +91,8 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader lightingShader("2.2.basic_lighting.vs", "2.2.basic_lighting.fs");
-	Shader lightCubeShader("2.2.light_cube.vs", "2.2.light_cube.fs");
+	Shader lightingShader("2.3.basic_lighting.vs", "2.3.basic_lighting.fs");
+	Shader lightCubeShader("2.3.light_cube.vs", "2.3.light_cube.fs");
 
 
 	// set up vertex data
@@ -181,13 +181,9 @@ int main()
 	lightingShader.use();
 	lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 	lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-	lightingShader.setVec3("lightPos", lightPos);
-
-	glm::mat4 lightModel = glm::translate(glm::mat4(1.0f), lightPos);
-	lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-
+	
 	glm::mat4 cubeModel = glm::mat4(1.0f);
-
+	
 	// render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
@@ -200,28 +196,35 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Rendering Light
-		// use shader program
-		lightingShader.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		
-		lightingShader.setMat4("projection", projection);
-		lightingShader.setMat4("view", view);
-		lightingShader.setMat4("model", cubeModel);
-		lightingShader.setVec3("viewPos", camera.Position);
-		
-		glBindVertexArray(cubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Rendering Cube
 		lightCubeShader.use();
+		glm::mat4 lightModel = glm::mat4(1.0f);
+		lightModel = glm::rotate(lightModel, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
+		lightModel = glm::translate(lightModel, lightPos);
+		lightModel = glm::scale(lightModel, glm::vec3(0.2f));
 		lightCubeShader.setMat4("projection", projection);
 		lightCubeShader.setMat4("view", view);
 		lightCubeShader.setMat4("model", lightModel);
 
 		glBindVertexArray(lightVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// Rendering Light
+		// use shader program
+		lightingShader.use();
+		lightingShader.setMat4("projection", projection);
+		lightingShader.setMat4("view", view);
+		lightingShader.setMat4("model", cubeModel);
+		lightingShader.setVec3("viewPos", camera.Position);
+		lightingShader.setVec3("lightPos", lightModel[3]); // 4th column, Position Vec of Mat4
+
+		glBindVertexArray(cubeVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		
 
 		imgui_on_render(params);
 
