@@ -91,7 +91,7 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader lightingShader("3.1.basic_lighting.vs", "3.1.basic_lighting.fs");
+	Shader lightingShader("3.1.materials.vs", "3.1.materials.fs");
 	Shader lightCubeShader("3.1.light_cube.vs", "3.1.light_cube.fs");
 
 
