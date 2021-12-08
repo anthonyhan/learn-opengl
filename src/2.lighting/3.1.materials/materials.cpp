@@ -179,8 +179,6 @@ int main()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	lightingShader.use();
-	lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-
 	lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
 	lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
 	lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
@@ -238,7 +236,7 @@ int main()
 		lightingShader.setMat4("view", view);
 		lightingShader.setMat4("model", cubeModel);
 		lightingShader.setVec3("viewPos", camera.Position);
-		lightingShader.setVec3("lightPos", lightModel[3]); // 4th column, Position Vec of Mat4
+		lightingShader.setVec3("light.position", lightModel[3]); // 4th column, Position Vec of Mat4
 
 
 

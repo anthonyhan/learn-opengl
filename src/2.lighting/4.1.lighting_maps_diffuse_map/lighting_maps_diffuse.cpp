@@ -21,52 +21,9 @@
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
-typedef struct Material
-{
-	const char* Name;
-	glm::vec3 Ambient;
-	glm::vec3 Diffuse;
-	glm::vec3 Specular;
-	float Shininess;
-} Material;
-
 typedef struct ui_params
 {
-	Material material;
 } ui_params;
-
-const Material MaterialList[] =
-{
-	{ "emerald",{0.0215,0.1745,0.0215},{0.07568,0.61424,0.07568},{0.633,0.727811,0.633},0.6 },
-	{ "jade",{0.135,0.2225,0.1575},{0.54,0.89,0.63},{0.316228,0.316228,0.316228},0.1 },
-	{ "obsidian",{0.05375,0.05,0.06625},{0.18275,0.17,0.22525},{0.332741,0.328634,0.346435},0.3 },
-	{ "pearl",{0.25,0.20725,0.20725},{1,0.829,0.829},{0.296648,0.296648,0.296648},0.088 },
-	{ "ruby",{0.1745,0.01175,0.01175},{0.61424,0.04136,0.04136},{0.727811,0.626959,0.626959},0.6 },
-	{ "turquoise",{0.1,0.18725,0.1745},{0.396,0.74151,0.69102},{0.297254,0.30829,0.306678},0.1 },
-	{ "brass",{0.329412,0.223529,0.027451},{0.780392,0.568627,0.113725},{0.992157,0.941176,0.807843},0.21794872 },
-	{ "bronze",{0.2125,0.1275,0.054},{0.714,0.4284,0.18144},{0.393548,0.271906,0.166721},0.2 },
-	{ "chrome",{0.25,0.25,0.25},{0.4,0.4,0.4},{0.774597,0.774597,0.774597},0.6 },
-	{ "copper",{0.19125,0.0735,0.0225},{0.7038,0.27048,0.0828},{0.256777,0.137622,0.086014},0.1 },
-	{ "gold",{0.24725,0.1995,0.0745},{0.75164,0.60648,0.22648},{0.628281,0.555802,0.366065},0.4 },
-	{ "silver",{0.19225,0.19225,0.19225},{0.50754,0.50754,0.50754},{0.508273,0.508273,0.508273},0.4 },
-	{ "blackplastic",{0.0,0.0,0.0},{0.01,0.01,0.01},{0.50,0.50,0.50},0.25 },
-	{ "cyanplastic",{0.0,0.1,0.06},{0.0,0.50980392,0.50980392},{0.50196078,0.50196078,0.50196078},0.25 },
-	{ "greenplastic",{0.0,0.0,0.0},{0.1,0.35,0.1},{0.45,0.55,0.45},0.25 },
-	{ "redplastic",{0.0,0.0,0.0},{0.5,0.0,0.0},{0.7,0.6,0.6},.25 },
-	{ "whiteplastic",{0.0,0.0,0.0},{0.55,0.55,0.55},{0.70,0.70,0.70},.25 },
-	{ "yellowplastic",{0.0,0.0,0.0},{0.5,0.5,0.0},{0.60,0.60,0.50},.25 },
-	{ "blackrubber",{0.02,0.02,0.02},{0.01,0.01,0.01},{0.4,0.4,0.4},.078125 },
-	{ "cyanrubber",{0.0,0.05,0.05},{0.4,0.5,0.5},{0.04,0.7,0.7},.078125 },
-	{ "greenrubber",{0.0,0.05,0.0},{0.4,0.5,0.4},{0.04,0.7,0.04},.078125 },
-	{ "redrubber",{0.05,0.0,0.0},{0.5,0.4,0.4},{0.7,0.04,0.04},.078125 },
-	{ "whiterubber",{0.05,0.05,0.05},{0.5,0.5,0.5},{0.7,0.7,0.7},.078125 },
-	{ "yellowrubber",{0.05,0.05,0.0},{0.5,0.5,0.4},{0.7,0.7,0.04},.078125 }
-};
-
-const char* MaterialNames[] =
-{ "emerald","jade","obsidian","pearl","ruby","turquoise","brass","bronze","chrome","copper","gold","silver",
-	"blackplastic","cyanplastic","greenplastic","redplastic","whiteplastic","yellowplastic","blackrubber",
-	"cyanrubber","greenrubber","redrubber","whiterubber","yellowrubber" };
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -134,53 +91,56 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader lightingShader("3.2.materials.vs", "3.2.materials.fs");
-	Shader lightCubeShader("3.2.light_cube.vs", "3.2.light_cube.fs");
+	Shader lightingShader("4.1.lighting_maps.vs", "4.1.lighting_maps.fs");
+	Shader lightCubeShader("4.1.light_cube.vs", "4.1.light_cube.fs");
 
+	// Textures
+	unsigned int diffuseMap = loadTexture("res/textures/container2.png", GL_RGBA, false);
 
 	// set up vertex data
 	float vertices[] = {
-		   -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-			0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-			0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-			0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		   -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		   -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		// positions          // normals           // texture coords
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
 
-		   -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-			0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-			0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-			0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		   -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		   -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
-		   -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		   -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		   -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		   -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		   -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		   -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-			0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-			0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-			0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-			0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-			0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-			0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-		   -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-			0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-			0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-			0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		   -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		   -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
 
-		   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-			0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-			0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-			0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		   -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		   -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
 	};
 
 	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
@@ -197,11 +157,14 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GL_FLOAT), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)0);
 	glEnableVertexAttribArray(0);
-	// texCoord
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GL_FLOAT), (void*)(3 * sizeof(GL_FLOAT)));
+	// normal
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)(3 * sizeof(GL_FLOAT)));
 	glEnableVertexAttribArray(1);
+	// texCoord
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)(6 * sizeof(GL_FLOAT)));
+	glEnableVertexAttribArray(2);
 
 	// light
 	unsigned int lightVAO;
@@ -209,7 +172,7 @@ int main()
 	glBindVertexArray(lightVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	// light position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GL_FLOAT), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	//unbind
@@ -222,8 +185,13 @@ int main()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	lightingShader.use();
-	lightingShader.setVec3("light.ambient", 1.0f, 1.0f, 1.0f);
-	lightingShader.setVec3("light.diffuse", 1.0f, 1.0f, 1.0f);
+	lightingShader.setInt("material.diffuse", 0);
+	lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+	lightingShader.setFloat("material.shininess", 32.0f);
+
+	lightingShader.setVec3("light.position", lightPos);
+	lightingShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+	lightingShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
 	lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 	glm::mat4 cubeModel = glm::mat4(1.0f);
@@ -263,17 +231,13 @@ int main()
 		lightingShader.setMat4("view", view);
 		lightingShader.setMat4("model", cubeModel);
 		lightingShader.setVec3("viewPos", camera.Position);
-		lightingShader.setVec3("light.position", lightModel[3]); // 4th column, Position Vec of Mat4
+		lightingShader.setVec3("lightPos", lightModel[3]); // 4th column, Position Vec of Mat4
 
-		lightingShader.setVec3("material.ambient", params.material.Ambient);
-		lightingShader.setVec3("material.diffuse", params.material.Diffuse);
-		lightingShader.setVec3("material.specular", params.material.Specular);
-		lightingShader.setFloat("material.shininess", params.material.Shininess * 128.0f);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
 
 		imgui_on_render(params);
 
@@ -319,13 +283,11 @@ void processInput(GLFWwindow* window)
 	{
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		glfwSetCursorPosCallback(window, NULL);
-		glfwSetScrollCallback(window, NULL);
 	}
 	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
 	{
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetCursorPosCallback(window, mouse_callback);
-		glfwSetScrollCallback(window, scroll_callback);
 		firstMouse = true;
 	}
 }
@@ -442,16 +404,6 @@ void imgui_on_render(ui_params& param)
 		ImGui::End();
 		return;
 	}
-
-	static int item_idx = 0; // If the selection isn't within 0..count, Combo won't display a preview
-	ImGui::Combo("Materials", &item_idx, MaterialNames, IM_ARRAYSIZE(MaterialNames));
-	params.material = MaterialList[item_idx];
-
-	ImGui::Separator();
-	ImGui::ColorEdit3("ambient##2f", (float*)&params.material.Ambient, ImGuiColorEditFlags_Float);
-	ImGui::ColorEdit3("diffuse##2f", (float*)&params.material.Diffuse, ImGuiColorEditFlags_Float);
-	ImGui::ColorEdit3("specular##2f", (float*)&params.material.Specular, ImGuiColorEditFlags_Float);
-	ImGui::Text("%.2f shininess", params.material.Shininess);
 
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");
