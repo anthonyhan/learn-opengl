@@ -118,7 +118,8 @@ set(2.lighting
     5.1.light_casters_directional
     5.2.light_casters_point
     5.3.light_casters_spot
-#    5.4.light_casters_spot_soft
+    5.4.light_casters_spot_soft
+    5.5.light_casters_exercise1
 #    6.multiple_lights
 )
 
