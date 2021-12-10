@@ -31,12 +31,6 @@ struct PointLight
     vec3 specular;
 };
 
-// spot light
-struct SpotLight
-{
-
-};
-
 #define NR_POINT_LIGHTS 4
 
 uniform DirLight dirLight;
@@ -50,8 +44,6 @@ in vec2 TexCoords;
 
 uniform vec3 viewPos;
 uniform Material material;
-
-
 
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
@@ -106,4 +98,6 @@ void main()
 
     // 3. spot light
     //result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+
+    FragColor = vec4(result, 1.0);
 }
