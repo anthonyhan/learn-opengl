@@ -23,6 +23,7 @@ const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
+	glm::vec3 dirLight_direction = glm::vec3(-0.2f, -1.0f, -0.3f);
 	glm::vec3 dirLight_ambient = glm::vec3(0.05f);
 	glm::vec3 dirLight_diffuse = glm::vec3(0.4f);
 	glm::vec3 dirLight_specular = glm::vec3(0.5f);
@@ -34,6 +35,12 @@ typedef struct ui_params
 	float pointLight_constant = 1.0f;
 	float pointLight_linear = 0.09f;
 	float pointLight_quadratic = 0.032f;
+
+	glm::vec3 spotLight_ambient = glm::vec3(0.0f);
+	glm::vec3 spotLight_diffuse = glm::vec3(1.0f);
+	glm::vec3 spotLight_specular = glm::vec3(1.0f);
+	float spotLight_cutOff = glm::radians(12.5f);
+	float spotLight_outerCutOff = glm::radians(15.0f);
 
 } ui_params;
 
@@ -103,8 +110,8 @@ int main()
 	// build and compile our shader program
 	// -----------------------------------------
 	// vertex shader
-	Shader lightingShader("6.multiple_lights.vs", "6.multiple_lights.fs");
-	Shader lightCubeShader("6.light_cube.vs", "6.light_cube.fs");
+	Shader lightingShader("6.1.multiple_lights.vs", "6.1.multiple_lights.fs");
+	Shader lightCubeShader("6.1.light_cube.vs", "6.1.light_cube.fs");
 
 	// Textures
 	unsigned int diffuseMap = loadTexture("res/textures/container2.png", GL_RGBA, false);
@@ -169,12 +176,12 @@ int main()
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
-	glm::vec3 pointLightPositions[] = 
+	glm::vec3 pointLightPositions[] =
 	{
-		glm::vec3( 0.7f,  0.2f,  2.0f),
-		glm::vec3( 2.3f, -3.3f, -4.0f),
+		glm::vec3(0.7f,  0.2f,  2.0f),
+		glm::vec3(2.3f, -3.3f, -4.0f),
 		glm::vec3(-4.0f,  2.0f, -12.0f),
-		glm::vec3( 0.0f,  0.0f, -3.0f)
+		glm::vec3(0.0f,  0.0f, -3.0f)
 	};
 
 	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
@@ -224,17 +231,16 @@ int main()
 	lightingShader.setFloat("material.shininess", 32.0f);
 
 	// dirLight
-	lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+	lightingShader.setVec3("dirLight.direction", params.dirLight_direction);
 	lightingShader.setVec3("dirLight.ambient", params.dirLight_ambient);
 	lightingShader.setVec3("dirLight.diffuse", params.dirLight_diffuse);
 	lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
 	// pointLight
-	//lightingShader.setVec3("light.position", 0.2f, 1.0f, 0.3f);
 	for (int i = 0; i < 4; ++i)
 	{
 		char buf[128];
-		
+
 		sprintf(buf, "pointLights[%d].constant", i);
 		lightingShader.setFloat(buf, 1.0f);
 
@@ -254,10 +260,17 @@ int main()
 		lightingShader.setVec3(buf, params.dirLight_specular);
 	}
 
-	//lightingShader.setVec3("light.position", camera.Position);
-	//lightingShader.setVec3("light.direction", camera.Front);
-	//lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-	//lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+	// spotLight
+	lightingShader.setFloat("spotLight.cutOff", glm::cos(params.spotLight_cutOff));
+	lightingShader.setFloat("spotLight.outerCutOff", glm::cos(params.spotLight_outerCutOff));
+	lightingShader.setVec3("spotLight.ambient", params.spotLight_ambient);
+	lightingShader.setVec3("spotLight.diffuse", params.spotLight_diffuse);
+	lightingShader.setVec3("spotLight.specular", params.spotLight_specular);
+
+	lightingShader.setFloat("spotLight.constant", params.pointLight_constant);
+	lightingShader.setFloat("spotLight.linear", params.pointLight_linear);
+	lightingShader.setFloat("spotLight.quadratic", params.pointLight_quadratic);
+
 
 	// render loop
 	// -----------
@@ -289,12 +302,24 @@ int main()
 			glBindVertexArray(lightVAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-		
+
 		// Rendering Cubes
 		lightingShader.use();
 		lightingShader.setMat4("projection", projection);
 		lightingShader.setMat4("view", view);
 		lightingShader.setVec3("viewPos", camera.Position);
+
+		lightingShader.setVec3("dirLight.ambient", params.dirLight_ambient);
+		lightingShader.setVec3("dirLight.diffuse", params.dirLight_diffuse);
+		lightingShader.setVec3("dirLight.specular", params.dirLight_specular);
+
+		lightingShader.setVec3("spotLight.ambient", params.spotLight_ambient);
+		lightingShader.setVec3("spotLight.diffuse", params.spotLight_diffuse);
+		lightingShader.setVec3("spotLight.specular", params.spotLight_specular);
+		
+		lightingShader.setVec3("spotLight.position", camera.Position);
+		lightingShader.setVec3("spotLight.direction", camera.Front);
+		
 
 		for (unsigned int i = 0; i < 10; ++i)
 		{
@@ -304,14 +329,9 @@ int main()
 			cubeModel = glm::rotate(cubeModel,/* (float)glfwGetTime() **/ glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 			lightingShader.setMat4("model", cubeModel);
 
-			lightingShader.setVec3("dirLight.ambient", params.dirLight_ambient);
-			lightingShader.setVec3("dirLight.diffuse", params.dirLight_diffuse);
-			lightingShader.setVec3("dirLight.specular", params.dirLight_specular);
-
-
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, diffuseMap);
-			
+
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, specularMap);
 
@@ -491,7 +511,7 @@ void imgui_on_render(ui_params& param)
 	ImGui::ColorEdit3("ambient", (float*)&params.dirLight_ambient, ImGuiColorEditFlags_Float);
 	ImGui::ColorEdit3("diffuse", (float*)&params.dirLight_diffuse, ImGuiColorEditFlags_Float);
 	ImGui::ColorEdit3("specular", (float*)&params.dirLight_specular, ImGuiColorEditFlags_Float);
-
+	
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");
