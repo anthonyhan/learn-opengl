@@ -56,7 +56,7 @@ endif(WIN32)
 set(CHAPTERS
     1.getting_started
     2.lighting
-#    3.model_loading
+    3.model_loading
 #    4.advanced_opengl
 #    5.advanced_lighting
 #    6.pbr
@@ -126,6 +126,7 @@ set(2.lighting
 
 set(3.model_loading
     1.model_loading
+    2.model_with_light
 )
 
 set(4.advanced_opengl

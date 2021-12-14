@@ -132,11 +132,11 @@ private:
 
 			bool skip = false;
 			
-			for (unsigned int j = 0; i < textures_loaded.size(); ++j)
+			for (unsigned int j = 0; j < textures_loaded.size(); ++j)
 			{
 				if (std::strcmp(textures_loaded[j].path.c_str(), str.C_Str()) == 0)
 				{
-					textures.push_back(textures_loaded[i]);
+					textures.push_back(textures_loaded[j]);
 					skip = true;
 					break;
 				}
