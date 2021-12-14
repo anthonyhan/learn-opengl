@@ -13,7 +13,6 @@
 #include <learnopengl/shader.h>
 #include <learnopengl/filesystem.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include "custom_camera.h"

@@ -189,9 +189,9 @@ configure_file(configuration/root_directory.h.in configuration/root_directory.h)
 include_directories(${CMAKE_BINARY_DIR}/configuration)
 
 # first create relevant static libraries requried for other projects
-# add_library(STB_IMAGE ${CMAKE_SOURCE_DIR}/include/stb_image.h)
-# set_target_properties(STB_IMAGE PROPERTIES LINKER_LANGUAGE C_STANDARD)
-# set(LIBS ${LIBS} STB_IMAGE)
+# STB_IMAGE
+add_library(STB_IMAGE "src/stb_image.cpp")
+set(LIBS ${LIBS} STB_IMAGE)
 
 # GLAD
 add_library(GLAD "src/glad.c")

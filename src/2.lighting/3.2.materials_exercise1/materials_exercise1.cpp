@@ -14,7 +14,6 @@
 #include <learnopengl/filesystem.h>
 #include <learnopengl/camera.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 // settings

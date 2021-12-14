@@ -15,6 +15,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include <stb_image.h>
 
 class Model
 {
@@ -32,6 +33,7 @@ public:
 
 private:
 
+	std::vector<Texture> textures_loaded;
 	std::vector<Mesh> meshes;
 	std::string directory;
 
@@ -127,13 +129,72 @@ private:
 		{
 			aiString str;
 			mat->GetTexture(type, i, &str);
-			Texture texture;
-			texture.id = TextureFromFile(str.C_Str(), directory);
-			texture.type = typeName;
-			texture.path = str;
-			textures.push_back(texture);
+
+			bool skip = false;
+			
+			for (unsigned int j = 0; i < textures_loaded.size(); ++j)
+			{
+				if (std::strcmp(textures_loaded[j].path.c_str(), str.C_Str()) == 0)
+				{
+					textures.push_back(textures_loaded[i]);
+					skip = true;
+					break;
+				}
+			}
+
+			if (!skip)
+			{
+				Texture texture;
+				texture.id = TextureFromFile(str.C_Str(), directory);
+				texture.type = typeName;
+				texture.path = str.C_Str();
+				textures.push_back(texture);
+
+				textures_loaded.push_back(texture);
+			}
 		}
+
 		return textures;
+	}
+
+	unsigned int TextureFromFile(const char* path, const std::string& directory)
+	{
+		std::string filename(path);
+		filename = directory + '/' + filename;
+
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+
+		int width, height, nrComponents;
+		unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+		if (data)
+		{
+			GLenum format;
+			if (nrComponents == 1)
+				format = GL_RED;
+			else if (nrComponents == 3)
+				format = GL_RGB;
+			else if (nrComponents == 4)
+				format = GL_RGBA;
+
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Texture failed to load at path: " << path << std::endl;
+			stbi_image_free(data);
+		}
+
+		return textureID;
 	}
 };
 
