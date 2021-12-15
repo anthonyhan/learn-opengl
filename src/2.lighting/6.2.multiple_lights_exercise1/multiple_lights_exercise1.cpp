@@ -65,7 +65,6 @@ float lastX = SCR_WIDTH * 0.5f;
 float lastY = SCR_HEIGHT * 0.5f;
 static bool firstMouse = true;
 
-
 int main()
 {
 	// glfw: initialize and configure
@@ -105,7 +104,6 @@ int main()
 	}
 
 	imgui_on_init(window);
-
 	glEnable(GL_DEPTH_TEST);
 
 	// build and compile our shader program
