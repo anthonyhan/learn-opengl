@@ -137,7 +137,8 @@ set(4.advanced_opengl
     3.2.blending_sort
     4.1.face_culling
     4.2.face_culling_exercise1
-#    5.1.framebuffers
+    5.1.framebuffers
+    5.2.framebuffers_kernel
 #    5.2.framebuffers_exercise1
 #    6.1.cubemaps_skybox
 #    6.2.cubemaps_environment_mapping
