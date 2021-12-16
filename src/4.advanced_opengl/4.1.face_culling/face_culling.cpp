@@ -13,7 +13,6 @@
 #include <learnopengl/filesystem.h>
 #include <learnopengl/shader.h>
 #include <learnopengl/camera.h>
-#include <learnopengl/model.h>
 
 #include <iostream>
 #include <map>

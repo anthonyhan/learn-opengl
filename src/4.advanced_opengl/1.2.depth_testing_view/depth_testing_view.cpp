@@ -13,7 +13,6 @@
 #include <learnopengl/filesystem.h>
 #include <learnopengl/shader.h>
 #include <learnopengl/camera.h>
-#include <learnopengl/model.h>
 
 #include <iostream>
 
@@ -431,7 +430,7 @@ void imgui_on_render(ui_params& param)
 
     ImGui::ColorEdit3("sky##1", (float*)&params.clearColor, ImGuiColorEditFlags_Float);
 
-    ImGui::Combo("combo 3 (array)", &params.depthFuncIndex, DepthFuncNames, IM_ARRAYSIZE(DepthFuncNames));
+    ImGui::Combo("DepthFunc", &params.depthFuncIndex, DepthFuncNames, IM_ARRAYSIZE(DepthFuncNames));
     ImGui::Separator();
 
     ImGui::Text("Press 1 to show cursor");
