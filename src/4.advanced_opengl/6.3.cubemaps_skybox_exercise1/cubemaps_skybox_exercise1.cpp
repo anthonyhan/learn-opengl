@@ -215,20 +215,7 @@ int main()
          1.0f, -1.0f,  1.0f
     };
 
-    // cube VAO
-    unsigned int cubeVAO, cubeVBO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &cubeVBO);
-    glBindVertexArray(cubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glBindVertexArray(0);
-
-    // screen quad VAO
+    // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -250,7 +237,10 @@ int main()
     // shader configuration
     // --------------------
     shader.use();
-    shader.setInt("skybox", 0);
+    shader.setInt("skybox", 3);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
     
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
@@ -289,28 +279,14 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-        // cubes
+        // model
         shader.use();
+        shader.setMat4("model", model);
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
         shader.setVec3("cameraPos", camera.Position);
 
-        glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        //glBindTexture(GL_TEXTURE_2D, cubeTexture); 	
-        model = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.0f, -1.0f));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
         ourModel.Draw(shader);
-
-        model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-
-        
         
         // Rendering Skybox
         view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
@@ -338,9 +314,7 @@ int main()
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &skyboxVAO);
-    glDeleteBuffers(1, &cubeVBO);
     glDeleteBuffers(1, &skyboxVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.

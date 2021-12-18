@@ -42,9 +42,9 @@ public:
 
     void Draw(Shader& shader)
     {
+        unsigned int ambientNr = 1;
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
-        unsigned int reflectNr = 1;
 
         for (unsigned int i = 0; i < textures.size(); ++i)
         {
@@ -52,14 +52,14 @@ public:
 
             std::string number;
             const std::string& name = textures[i].type;
-            if (name == "texture_diffuse")
+            if (name == "texture_ambient")
+                number = std::to_string(ambientNr++);
+            else if (name == "texture_diffuse")
                 number = std::to_string(diffuseNr++);
             else if (name == "texture_specular")
                 number = std::to_string(specularNr++);
-            else if(name == "texture_reflect")
-                number = std::to_string(reflectNr++);
-
-            shader.setInt(("material." + name + number).c_str(), i);
+            
+            shader.setInt((name + number).c_str(), i);
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
 
