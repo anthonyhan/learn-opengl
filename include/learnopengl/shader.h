@@ -15,6 +15,7 @@ class Shader
 	{
 		ECTYPE_VERTEX,
 		ECTYPE_FRAGMENT,
+		ECTYPE_GEOMETRY,
 		ECTYPE_PROGRAM
 	};
 public:
@@ -22,11 +23,13 @@ public:
 	unsigned int ID;
 
 	// constructor
-	Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
+	Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const char* geometryPath = NULL)
 	{
 		// 1. read vertex/fragment code from file
 		std::string vertexCode;
 		std::string fragmentCode;
+		std::string geometryCode;
+
 		std::ifstream vShaderFile;
 		std::ifstream fShaderFile;
 
@@ -46,6 +49,20 @@ public:
 
 			vertexCode = vShaderStream.str();
 			fragmentCode = fShaderStream.str();
+
+			if (geometryPath)
+			{
+				std::ifstream gShaderFile;
+				gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+				gShaderFile.open(geometryPath);
+
+				std::stringstream gShaderStream;
+				gShaderStream << gShaderFile.rdbuf();
+
+				gShaderFile.close();
+				geometryCode = gShaderStream.str();
+			}
+
 		}
 		catch (std::ifstream::failure e)
 		{
@@ -72,6 +89,19 @@ public:
 		ID = glCreateProgram();
 		glAttachShader(ID, vertex);
 		glAttachShader(ID, fragment);
+
+		if (geometryPath)
+		{
+			const char* gShaderCode = geometryCode.c_str();
+			unsigned int geometry = glCreateShader(GL_GEOMETRY_SHADER);
+			glShaderSource(geometry, 1, &gShaderCode, NULL);
+			glCompileShader(geometry);
+			checkCompileErrors(geometry, ECTYPE_GEOMETRY);
+
+			glAttachShader(ID, geometry);
+		}
+
+		
 		glLinkProgram(ID);
 		checkCompileErrors(ID, ECompileType::ECTYPE_PROGRAM);
 
