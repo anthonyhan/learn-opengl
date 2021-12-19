@@ -75,7 +75,7 @@ StyleCopReport.xml
 *_h.h
 *.ilk
 *.meta
-*.obj
+# *.obj # 3D model file has the same extension.
 *.iobj
 *.pch
 *.pdb
