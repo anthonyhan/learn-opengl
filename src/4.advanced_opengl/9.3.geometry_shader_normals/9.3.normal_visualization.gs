@@ -7,13 +7,12 @@ in VS_OUT {
 } gs_in[];
 
 const float MAGNITUDE = 0.4;
-uniform float time;
 
 void GenerateLine(int index)
 {
     gl_Position = gl_in[index].gl_Position;
     EmitVertex();
-    gl_Position = gl_in[index].gl_Position + vec4(gs_in[index].normal, 0.0) * MAGNITUDE *  ((sin(time + length(gl_Position)) + 1.0) / 2.0);
+    gl_Position = gl_in[index].gl_Position + vec4(gs_in[index].normal, 0.0) * MAGNITUDE;
     EmitVertex();
     EndPrimitive();
 }
