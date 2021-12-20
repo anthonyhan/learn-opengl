@@ -20,6 +20,10 @@
 class Model
 {
 public:
+
+	std::vector<Mesh> meshes;
+
+public:
 	Model(const char* path)
 	{
 		loadModel(path);
@@ -34,7 +38,7 @@ public:
 private:
 
 	std::vector<Texture> textures_loaded;
-	std::vector<Mesh> meshes;
+	
 	std::string directory;
 
 	void loadModel(const std::string& path)
