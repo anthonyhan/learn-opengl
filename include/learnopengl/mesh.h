@@ -68,8 +68,8 @@ public:
         // draw mesh
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
 
-        glBindVertexArray(NULL);
         glActiveTexture(GL_TEXTURE0);
     }
 
@@ -93,7 +93,7 @@ private:
 
         // vertex 
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)NULL);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
 
         // normal
         glEnableVertexAttribArray(1);
@@ -101,9 +101,9 @@ private:
 
         // uv
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
 
-        glBindVertexArray(NULL);
+        glBindVertexArray(0);
     }
 
     
