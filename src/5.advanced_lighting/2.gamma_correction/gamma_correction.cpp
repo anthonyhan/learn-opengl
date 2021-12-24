@@ -22,7 +22,7 @@ const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
-	bool blinn = false;
+	bool gammaEnabled = false;
 } ui_params;
 
 
@@ -30,7 +30,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-unsigned int loadTexture(const char* texPath);
+unsigned int loadTexture(const char* texPath, bool gammaCorrection);
 
 void imgui_on_init(GLFWwindow* window);
 void imgui_on_render(ui_params& param);
@@ -86,11 +86,15 @@ int main()
 
 	imgui_on_init(window);
 
+	// configure global opengl state
+	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	 // build and compile shaders
     // -------------------------
-    Shader shader("1.advanced_lighting.vs", "1.advanced_lighting.fs");
+    Shader shader("2.gamma_correction.vs", "2.gamma_correction.fs");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -121,18 +125,31 @@ int main()
 
     // load textures
     // -------------
-    unsigned int floorTexture = loadTexture("res/textures/wood.png");
-
-    // shader configuration
-    // --------------------
-    shader.use();
-    shader.setInt("floorTexture", 0);
+    unsigned int floorTexture = loadTexture("res/textures/wood.png", false);
+	unsigned int floorTextureGammaCorrected = loadTexture("res/textures/wood.png", true);
 
     // lighting info
     // -------------
-    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+    glm::vec3 lightPositions[] = {
+        glm::vec3(-3.0f, 0.0f, 0.0f),
+        glm::vec3(-1.0f, 0.0f, 0.0f),
+        glm::vec3 (1.0f, 0.0f, 0.0f),
+        glm::vec3 (3.0f, 0.0f, 0.0f)
+    };
 
-    shader.setVec3("lightPos", lightPos);
+    glm::vec3 lightColors[] = {
+        glm::vec3(0.25),
+        glm::vec3(0.50),
+        glm::vec3(0.75),
+        glm::vec3(1.00)
+    };
+
+	// shader configuration
+	// --------------------
+	shader.use();
+	shader.setInt("floorTexture", 0);
+	shader.setVec3("lightPositions", lightPositions[0], 4);
+	shader.setVec3("lightColors", lightColors[0], 4);
 
 	// render loop
 	// -----------
@@ -143,20 +160,22 @@ int main()
 		processInput(window);
 
 		// Rendering
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 
-		// Rendering Light
 		shader.use();
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
         shader.setVec3("viewPos", camera.Position);
-        shader.setBool("blinn", params.blinn);
+		shader.setInt("gamma", params.gammaEnabled);
 
+		// floor
 		glBindVertexArray(planeVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, params.gammaEnabled ? floorTextureGammaCorrected : floorTexture);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		imgui_on_render(params);
@@ -243,7 +262,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	camera.ProcessMouseScroll(yoffset);
 }
 
-unsigned int loadTexture(char const * path)
+unsigned int loadTexture(char const * path, bool gammaCorrection)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -252,20 +271,29 @@ unsigned int loadTexture(char const * path)
     unsigned char *data = stbi_load(FileSystem::getPath(path).c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
+		GLenum internalFormat;
+		GLenum dataFormat;
+		if (nrComponents == 1)
+		{
+			internalFormat = dataFormat = GL_RED;
+		}
+		else if (nrComponents == 3)
+		{
+			internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+			dataFormat = GL_RGB;
+		}
+		else if (nrComponents == 4)
+		{
+			internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+			dataFormat = GL_RGBA;
+		}
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -326,13 +354,13 @@ void imgui_on_render(ui_params& param)
 	static bool open = false;
 
 	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-	if (!ImGui::Begin("Config", &open, ImGuiWindowFlags_AlwaysAutoResize))
+	if (!ImGui::Begin("Config", &open, ImGuiWindowFlags_AlwaysAutoResize| ImGuiWindowFlags_NoCollapse))
 	{
 		ImGui::End();
 		return;
 	}
 
-	ImGui::Checkbox("Blinn-Phong", &params.blinn);
+	ImGui::Checkbox("Gamma Correction", &params.gammaEnabled);
 
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
