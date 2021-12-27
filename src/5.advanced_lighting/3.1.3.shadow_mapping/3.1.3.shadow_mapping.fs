@@ -23,12 +23,28 @@ float ShadowCalculation(vec4 FragPosLightSpace, vec3 normal, vec3 lightDir)
     // NDC to TexCoord
     projCoords = projCoords * 0.5 + 0.5;
 
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
-    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0f;
-    return shadow;
+    if(projCoords.z > 1.0)
+    {
+        return 0.0;
+    }else
+    {
+        // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+        float closestDepth = texture(shadowMap, projCoords.xy).r; 
+        float currentDepth = projCoords.z;
+        float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+        float shadow = 0.0; //currentDepth - bias > closestDepth ? 1.0 : 0.0f;
+        vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+        for(int x = -1; x <= 1; ++x)
+        {
+            for(int y = -1; y <= 1; ++y)
+            {
+                float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
+            }    
+        }
+        shadow /= 9.0;
+        return shadow;
+    }
 }
 
 void main()
