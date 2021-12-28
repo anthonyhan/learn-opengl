@@ -96,8 +96,8 @@ int main()
 
 	// build and compile shaders
    // -------------------------
-	Shader shader("3.2.1.point_shadows.vs", "3.2.1.point_shadows.fs");
-	Shader simpleDepthShader("3.2.1.point_shadows_depth.vs", "3.2.1.point_shadows_depth.fs", "3.2.1.point_shadows_depth.gs");
+	Shader shader("3.2.2.point_shadows.vs", "3.2.2.point_shadows.fs");
+	Shader simpleDepthShader("3.2.2.point_shadows_depth.vs", "3.2.2.point_shadows_depth.fs", "3.2.2.point_shadows_depth.gs");
 
 	// load textures
 	// -------------
@@ -171,12 +171,9 @@ int main()
 		shadowTransforms.push_back(shadowProj* glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 		shadowTransforms.push_back(shadowProj* glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 
-
 		// Rendering
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		
 
 		// 1. render depth of scene to texture (from light's perspective)
 		// --------------------------------------------------------------
