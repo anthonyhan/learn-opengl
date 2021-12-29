@@ -19,7 +19,7 @@
 
 typedef struct ui_params
 {
-	
+    glm::vec3 lightPos = glm::vec3(0.5f, 1.0f, 0.3f);
 } ui_params;
 
 static ui_params params;
@@ -110,7 +110,6 @@ int main()
 
     // lighting info
     // -------------
-    glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
 
     // render loop
     // -----------
@@ -139,10 +138,11 @@ int main()
         shader.setMat4("view", view);
         // render normal-mapped quad
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
+        //model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        //model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
         shader.setMat4("model", model);
         shader.setVec3("viewPos", camera.Position);
-        shader.setVec3("lightPos", lightPos);
+        shader.setVec3("lightPos", params.lightPos);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
@@ -151,7 +151,7 @@ int main()
 
         // render light source (simply re-renders a smaller plane at the light's position for debugging/visualization)
         model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
+        model = glm::translate(model, params.lightPos);
         model = glm::scale(model, glm::vec3(0.1f));
         shader.setMat4("model", model);
         renderQuad();
@@ -418,6 +418,7 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
+    ImGui::DragFloat3("LightPos", &params.lightPos.x, 0.1f, -2.0f, 2.0f);
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");
