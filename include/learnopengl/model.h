@@ -44,7 +44,7 @@ private:
 	void loadModel(const std::string& path)
 	{
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 		{
@@ -86,6 +86,7 @@ private:
 			vertex.Position.y = mesh->mVertices[i].y;
 			vertex.Position.z = mesh->mVertices[i].z;
 
+			// normals
 			if (mesh->HasNormals())
 			{
 				vertex.Normal.x = mesh->mNormals[i].x;
@@ -93,13 +94,26 @@ private:
 				vertex.Normal.z = mesh->mNormals[i].z;
 			}
 
+			// texture coordinates
 			if (mesh->mTextureCoords[0])
 			{
 				vertex.TexCoords.x = mesh->mTextureCoords[0][i].x;
 				vertex.TexCoords.y = mesh->mTextureCoords[0][i].y;
+
+				if (mesh->HasTangentsAndBitangents())
+				{
+					vertex.Tangent.x = mesh->mTangents[i].x;
+					vertex.Tangent.y = mesh->mTangents[i].y;
+					vertex.Tangent.z = mesh->mTangents[i].z;
+
+					vertex.Bitangent.x = mesh->mBitangents[i].x;
+					vertex.Bitangent.y = mesh->mBitangents[i].y;
+					vertex.Bitangent.z = mesh->mBitangents[i].z;
+				}
 			}
 			else
 				vertex.TexCoords = glm::vec2(0.0f);
+
 
 			vertices.push_back(vertex);
 		}
@@ -119,14 +133,25 @@ private:
 		{
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-			std::vector<Texture> ambientMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_ambient");
-			textures.insert(textures.end(), ambientMaps.begin(), ambientMaps.end());
+			// we assume a convention for sampler names in the shaders. Each diffuse texture should be named
+			// as 'texture_diffuseN' where N is a sequential number ranging from 1 to MAX_SAMPLER_NUMBER. 
+			// Same applies to other texture as the following list summarizes:
+			// diffuse: texture_diffuseN
+			// specular: texture_specularN
+			// normal: texture_normalN
 
+			// 1. diffuse maps
 			std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-
+			// 2. specular maps
 			std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+			// 3. normal maps
+			std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+			textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+			// 4. height maps
+			std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+			textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 		}
 
 		return Mesh(vertices, indices, textures);
