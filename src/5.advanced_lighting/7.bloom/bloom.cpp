@@ -97,6 +97,7 @@ int main()
 	// build and compile shaders
    // -------------------------
 	Shader shader("7.bloom.vs", "7.bloom.fs");
+	Shader shaderLight("7.bloom.vs", "7.light_box.fs");
 	Shader shaderBloomFinal("7.bloom_final.vs", "7.bloom_final.fs");
 	
 	// load textures
@@ -245,6 +246,21 @@ int main()
 		shader.setMat4("model", model);
 		renderCube();
 
+		// finally show all the light sources as bright cubes
+		shaderLight.use();
+		shaderLight.setMat4("projection", projection);
+		shaderLight.setMat4("view", view);
+
+		for (unsigned int i = 0; i < lightPositions.size(); i++)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(lightPositions[i]));
+			model = glm::scale(model, glm::vec3(0.25f));
+			shaderLight.setMat4("model", model);
+			shaderLight.setVec3("lightColor", lightColors[i]);
+			renderCube();
+		}
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// 2. now render floating point color buffer to 2D quad and tonemap HDR colors to default framebuffer's (clamped) color range
@@ -252,7 +268,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shaderBloomFinal.use();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]); 
+		glBindTexture(GL_TEXTURE_2D, colorBuffers[1]); 
 		shaderBloomFinal.setFloat("exposure", params.exposure);
 		renderQuad();
 
