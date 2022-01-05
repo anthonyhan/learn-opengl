@@ -22,7 +22,9 @@ const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
+	bool bloom = true;
 	float exposure = 1.0f;
+	unsigned int blur_amount = 10;
 } ui_params;
 
 
@@ -91,13 +93,12 @@ int main()
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// build and compile shaders
    // -------------------------
 	Shader shader("7.bloom.vs", "7.bloom.fs");
 	Shader shaderLight("7.bloom.vs", "7.light_box.fs");
+	Shader shaderBlur("7.blur.vs", "7.blur.fs");
 	Shader shaderBloomFinal("7.bloom_final.vs", "7.bloom_final.fs");
 	
 	// load textures
@@ -143,6 +144,30 @@ int main()
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	// ping-pong-framebuffer for blurring
+    unsigned int pingpongFBO[2];
+    unsigned int pingpongColorbuffers[2];
+	glGenFramebuffers(2, pingpongFBO);
+	glGenTextures(2, pingpongColorbuffers);
+	for (GLuint i = 0; i < 2; ++i)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+		glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::cout << "Framebuffer not complete!\n";
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+
 	// lighting info
 	// -------------
 	// positions
@@ -163,8 +188,11 @@ int main()
 	// --------------------
 	shader.use();
 	shader.setInt("diffuseTexture", 0);
+	shaderBlur.use();
+	shaderBlur.setInt("image", 0);
 	shaderBloomFinal.use();
 	shaderBloomFinal.setInt("scene", 0);
+	shaderBloomFinal.setInt("bloomBlur", 1);
 
 	// render loop
 	// -----------
@@ -263,13 +291,33 @@ int main()
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		// 2. blur bright fragments with two-pass Gaussian Blur 
+		// --------------------------------------------------
+		bool horizontal = true, first_iteration = true;
+		shaderBlur.use();
+		for (unsigned int i = 0; i < params.blur_amount; ++i)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+			shaderBlur.setInt("horizontal", horizontal);
+			glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);
+			renderQuad();
+			horizontal = !horizontal;
+			if (first_iteration)
+				first_iteration = false;
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 		// 2. now render floating point color buffer to 2D quad and tonemap HDR colors to default framebuffer's (clamped) color range
 		// --------------------------------------------------------------------------------------------------------------------------
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shaderBloomFinal.use();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, colorBuffers[1]); 
+		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
 		shaderBloomFinal.setFloat("exposure", params.exposure);
+		shaderBloomFinal.setBool("bloom", params.bloom && params.blur_amount > 0);
 		renderQuad();
 
 		imgui_on_render(params);
@@ -558,7 +606,9 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
+	ImGui::Checkbox("Bloom", &params.bloom);
 	ImGui::DragFloat("Exposure", &params.exposure, 0.01f, 0.0f, 10.0f);
+	ImGui::DragInt("Blur Amount", (int *)(&params.blur_amount), 1, 0, 50);
 
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
