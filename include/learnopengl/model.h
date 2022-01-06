@@ -22,12 +22,13 @@ class Model
 public:
 
 	std::vector<Mesh> meshes;
+	bool gammaCorrection;
 
 public:
-	Model(const char* path)
-	{
-		loadModel(path);
-	}
+	Model(const std::string&path, bool gamma = false) : gammaCorrection(gamma)
+    {
+        loadModel(path);
+    }
 
 	void Draw(Shader& shader)
 	{
@@ -44,7 +45,7 @@ private:
 	void loadModel(const std::string& path)
 	{
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 		{
@@ -180,7 +181,7 @@ private:
 			if (!skip)
 			{
 				Texture texture;
-				texture.id = TextureFromFile(str.C_Str(), directory);
+				texture.id = TextureFromFile(str.C_Str(), directory, gammaCorrection);
 				texture.type = typeName;
 				texture.path = str.C_Str();
 				textures.push_back(texture);
@@ -192,7 +193,7 @@ private:
 		return textures;
 	}
 
-	unsigned int TextureFromFile(const char* path, const std::string& directory)
+	static unsigned int TextureFromFile(const char* path, const std::string& directory, bool gammaCorrection = false)
 	{
 		std::string filename(path);
 		filename = directory + '/' + filename;
@@ -204,16 +205,25 @@ private:
 		unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
 		if (data)
 		{
-			GLenum format;
+			GLenum internalFormat;
+			GLenum dataFormat;
 			if (nrComponents == 1)
-				format = GL_RED;
+			{
+				internalFormat = dataFormat = GL_RED;
+			}
 			else if (nrComponents == 3)
-				format = GL_RGB;
+			{
+				internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+				dataFormat = GL_RGB;
+			}
 			else if (nrComponents == 4)
-				format = GL_RGBA;
+			{
+				internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+				dataFormat = GL_RGBA;
+			}
 
 			glBindTexture(GL_TEXTURE_2D, textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
