@@ -109,7 +109,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float attenuation = 1.0/(light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
     float theta = dot(lightDir, normalize(-light.direction));
-    float epsilon 1.1.depth_testing= light.cutOff - light.outerCutOff;
+    float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff)/epsilon, 0.0, 1.0);
 
     vec3 ambient = light.ambient  * vec3(texture(texture_diffuse1, TexCoords));
