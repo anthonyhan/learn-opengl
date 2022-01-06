@@ -23,6 +23,10 @@ const unsigned int SCR_HEIGHT = 768;
 
 typedef struct ui_params
 {
+	int gbuffer_display_mode = 0;
+	bool light_show_position = true;
+	bool light_attenuation = true;
+	float exposure = 1.0f;
 } ui_params;
 
 
@@ -88,6 +92,9 @@ int main()
 
 	imgui_on_init(window);
 
+	// tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
+	stbi_set_flip_vertically_on_load(true);
+
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
@@ -100,7 +107,8 @@ int main()
 	
     // load models
     // -----------
-    Model backpack("res/objects/backpack/backpack.obj");
+    Model backpack(FileSystem::getPath("res/objects/backpack/backpack.obj"), true);
+
     std::vector<glm::vec3> objectPositions;
     objectPositions.push_back(glm::vec3(-3.0,  -0.5, -3.0));
     objectPositions.push_back(glm::vec3( 0.0,  -0.5, -3.0));
@@ -117,12 +125,12 @@ int main()
 	GLuint gBuffer;
 	glGenFramebuffers(1, &gBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-	GLuint gPosition, gNormal, gColorSpec;
+	GLuint gPosition, gNormal, gAlbedoSpec;
 
 	// - position color buffer
 	glGenTextures(1, &gPosition);
 	glBindTexture(GL_TEXTURE_2D, gPosition);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
@@ -130,18 +138,18 @@ int main()
 	// - normal color buffer
 	glGenTextures(1, &gNormal);
 	glBindTexture(GL_TEXTURE_2D, gNormal);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
 	// - color & specular color buffer
-	glGenTextures(1, &gColorSpec);
-	glBindTexture(GL_TEXTURE_2D, gColorSpec);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
+	glGenTextures(1, &gAlbedoSpec);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gColorSpec, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
 
 	GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glDrawBuffers(3, attachments);
@@ -154,35 +162,57 @@ int main()
 	// attach depth buffer
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
 
-	GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(2, attachments);
-
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
 		std::cout << "Framebuffer not complete!\n";
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
+	
 
 	// lighting info
 	// -------------
-	// positions
+	const unsigned int NR_LIGHTS = 32;
 	std::vector<glm::vec3> lightPositions;
-	lightPositions.push_back(glm::vec3(0.0f, 0.5f, 1.5f));
-	lightPositions.push_back(glm::vec3(-4.0f, 0.5f, -3.0f));
-	lightPositions.push_back(glm::vec3(3.0f, 0.5f, 1.0f));
-	lightPositions.push_back(glm::vec3(-.8f, 2.4f, -1.0f));
-	// colors
 	std::vector<glm::vec3> lightColors;
-	lightColors.push_back(glm::vec3(5.0f, 5.0f, 5.0f));
-	lightColors.push_back(glm::vec3(10.0f, 0.0f, 0.0f));
-	lightColors.push_back(glm::vec3(0.0f, 0.0f, 15.0f));
-	lightColors.push_back(glm::vec3(0.0f, 5.0f, 0.0f));
-
-
+	srand(13);
+	for (unsigned int i = 0; i < NR_LIGHTS; i++)
+	{
+		// calculate slightly random offsets
+		float xPos = ((rand() % 100) / 100.0) * 6.0f - 3.0f;
+		float yPos = ((rand() % 100) / 100.0) * 6.0f - 4.0f;
+		float zPos = ((rand() % 100) / 100.0) * 6.0f - 3.0f;
+		lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
+		// also calculate random color
+		float rColor = ((rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
+		float gColor = ((rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
+		float bColor = ((rand() % 100) / 200.0f) + 0.5f; // between 0.5 and 1.0
+		lightColors.push_back(glm::vec3(rColor, gColor, bColor));
+	}
+	
 	// shader configuration
 	// --------------------
+	shaderLightingPass.use();
+	shaderLightingPass.setInt("gPosition", 0);
+	shaderLightingPass.setInt("gNormal", 1);
+	shaderLightingPass.setInt("gAlbedoSpec", 2);
+
+	const GLfloat linear = 0.7f;
+	const GLfloat quadratic = 1.8f;
+
+	for (unsigned int i = 0; i < NR_LIGHTS; ++i)
+	{
+		char buf[32];
+		sprintf(buf, "lights[%d].Position", i);
+		shaderLightingPass.setVec3(buf, lightPositions[i]);
+		sprintf(buf, "lights[%d].Color", i);
+		shaderLightingPass.setVec3(buf, lightColors[i]);
+
+		sprintf(buf, "lights[%d].Linear", i);
+		shaderLightingPass.setFloat(buf, linear);
+
+		sprintf(buf, "lights[%d].Quadratic", i);
+		shaderLightingPass.setFloat(buf, quadratic);
+	}
 
 
 	// render loop
@@ -200,25 +230,67 @@ int main()
 
         // 1. geometry pass: render scene's geometry/color data into gbuffer
         // -----------------------------------------------------------------
-
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+		shaderGeometryPass.use();
+		shaderGeometryPass.setMat4("projection", projection);
+		shaderGeometryPass.setMat4("view", view);
+		for (unsigned int i = 0; i < objectPositions.size(); ++i)
+		{
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), objectPositions[i]);
+			model = glm::scale(model, glm::vec3(0.5f));
+			shaderGeometryPass.setMat4("model", model);
+			backpack.Draw(shaderGeometryPass);
+		}
 
         // 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
         // -----------------------------------------------------------------------------------------------------------------------
-		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shaderLightingPass.use();
+		shaderLightingPass.setVec3("viewPos", camera.Position);
+		shaderLightingPass.setInt("gbuffer_display_mode", params.gbuffer_display_mode);
+		shaderLightingPass.setInt("light_attenuation", params.light_attenuation);
+		shaderLightingPass.setFloat("exposure", params.exposure);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+
+		renderQuad();
+
 
         // 2.5. copy content of geometry's depth buffer to default framebuffer's depth buffer
         // ----------------------------------------------------------------------------------
-
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
+		glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // 3. render lights on top of scene
         // --------------------------------
+		if (params.light_show_position)
+		{
+			shaderLightBox.use();
+			shaderLightBox.setMat4("projection", projection);
+			shaderLightBox.setMat4("view", view);
+			for (unsigned int i = 0; i < NR_LIGHTS; ++i)
+			{
+				glm::mat4 model = glm::translate(glm::mat4(1.0f), lightPositions[i]);
+				model = glm::scale(model, glm::vec3(0.125f));
+				shaderLightBox.setMat4("model", model);
+				shaderLightBox.setVec3("lightColor", lightColors[i]);
+				renderCube();
+			}
 
-
+		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-		renderQuad();
 
 		imgui_on_render(params);
 
@@ -509,7 +581,11 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
-
+	static const char* gbuffer_items[] = { "ALL", "Position", "Normal", "Albedo", "Specular"};
+	ImGui::Combo("GBuffer", &params.gbuffer_display_mode, gbuffer_items, IM_ARRAYSIZE(gbuffer_items));
+	ImGui::Checkbox("Show Lights", &params.light_show_position);
+	ImGui::Checkbox("Lighting Attenuation", &params.light_attenuation);
+	ImGui::DragFloat("Exposure", &params.exposure, 0.01f, 0.0f, 10.0f);
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");
