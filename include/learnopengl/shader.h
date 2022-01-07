@@ -7,7 +7,6 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 
 class Shader
 {
@@ -66,7 +65,7 @@ public:
 		}
 		catch (std::ifstream::failure e)
 		{
-			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ" << std::endl;
+			printf("ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ\n");;
 			return;
 		}
 
@@ -189,7 +188,7 @@ protected:
 			if (!success)
 			{
 				glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-				std::cout << "ERROR::SHADER::" << (type==ECompileType::ECTYPE_VERTEX ? "VERTEX" : "FRAGMENT") << "::COMPILATION_FAILED\n" << infoLog << std::endl;
+				printf("ERROR::SHADER::%s::COMPILATION_FAILED\n%s\n", (type == ECompileType::ECTYPE_VERTEX ? "VERTEX" : "FRAGMENT"), infoLog);
 			}
 		}
 		else
@@ -199,7 +198,7 @@ protected:
 			if (!success)
 			{
 				glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-				std::cout << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infoLog << std::endl;
+				printf("ERROR::SHADER::PROGRAM::LINK_FAILED\n%s\n", infoLog);
 			}
 		}
 	}

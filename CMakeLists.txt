@@ -170,7 +170,7 @@ set(5.advanced_lighting
     7.bloom
     8.1.deferred_shading
     8.2.deferred_shading_volumes
-#    9.ssao
+    9.ssao
 )
 
 set(6.pbr
