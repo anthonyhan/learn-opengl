@@ -27,6 +27,9 @@ typedef struct ui_params
 	int gbuffer_display_mode = 0;
 	//bool light_show_position = true;
 	bool light_attenuation = true;
+	int kernel_size = 64;
+	float kernel_radius = 0.5f;
+	float kernel_bias = 0.025f;
 } ui_params;
 
 
@@ -316,6 +319,9 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 		shaderSSAO.use();
 		shaderSSAO.setMat4("projection", projection);
+		shaderSSAO.setInt("kernelSize", params.kernel_size);
+		shaderSSAO.setFloat("radius", params.kernel_radius);
+		shaderSSAO.setFloat("bias", params.kernel_bias);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
 		glActiveTexture(GL_TEXTURE1);
@@ -353,47 +359,6 @@ int main()
         glActiveTexture(GL_TEXTURE3); // add extra SSAO texture to lighting pass
         glBindTexture(GL_TEXTURE_2D, ssaoBlurColorBuffer);
         renderQuad();
-
-		//for (unsigned int i = 0; i < NR_LIGHTS; ++i)
-		//{
-		//	char buf[32];
-		//	sprintf(buf, "lights[%d].Position", i);
-		//	glm::vec3 temp = lightPositions[i];
-		//	temp.x = sin(glfwGetTime() * 0.1f * i) * lightPositions[i].x;
-		//	temp.y = cos(glfwGetTime() * 0.1f * i) * lightPositions[i].y;
-		//	shaderLightingPass.setVec3(buf, temp);
-		//}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-        // 2.5. copy content of geometry's depth buffer to default framebuffer's depth buffer
-        // ----------------------------------------------------------------------------------
-		//glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
-		//glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        // 3. render lights on top of scene
-        // --------------------------------
-		//if (params.light_show_position)
-		//{
-		//	shaderLightBox.use();
-		//	shaderLightBox.setMat4("projection", projection);
-		//	shaderLightBox.setMat4("view", view);
-		//	for (unsigned int i = 0; i < NR_LIGHTS; ++i)
-		//	{
-		//		glm::vec3 temp = lightPositions[i];
-		//		temp.x = sin(glfwGetTime() * 0.1f * i) * lightPositions[i].x;
-		//		temp.y = cos(glfwGetTime() * 0.1f * i) * lightPositions[i].y;
-		//		glm::mat4 model = glm::translate(glm::mat4(1.0f), temp);
-		//		model = glm::scale(model, glm::vec3(0.125f));
-		//		shaderLightBox.setMat4("model", model);
-		//		shaderLightBox.setVec3("lightColor", lightColors[i]);
-		//		renderCube();
-		//	}
-
-		//}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -686,10 +651,14 @@ void imgui_on_render(ui_params& param)
 		return;
 	}
 
-	static const char* gbuffer_items[] = { "ALL", "Position", "Normal", "Albedo", "Specular", "SSAO" };
+	static const char* gbuffer_items[] = { "ALL", "Position", "Normal", "Albedo", "Specular", "SSAO"};
 	ImGui::Combo("GBuffer", &params.gbuffer_display_mode, gbuffer_items, IM_ARRAYSIZE(gbuffer_items));
-	//ImGui::Checkbox("Show Lights", &params.light_show_position);
 	ImGui::Checkbox("Lighting Attenuation", &params.light_attenuation);
+	ImGui::Separator();
+	ImGui::Text("SSAO");
+	ImGui::DragInt("Kernel Size", &params.kernel_size, 1.0f, 1, 128);
+	ImGui::DragFloat("Kernel Radius", &params.kernel_radius, 0.1f, 0.1f, 2.0f);
+	ImGui::DragFloat("Kernel Bias", &params.kernel_bias, 0.005f, 0.005f, 0.1f);
 	ImGui::Separator();
 	ImGui::Text("Press 1 to show cursor");
 	ImGui::Text("Press 2 to hide cursor");

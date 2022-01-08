@@ -31,9 +31,8 @@ void main()
 {
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec4 AlbedoSpec = texture(gAlbedo, TexCoords);
-    vec3 Diffuse = AlbedoSpec.rgb;
-    float Specular = 1.0;
+    vec3 Diffuse = texture(gAlbedo, TexCoords).rgb;
+    float Specular = 1.0f;
     float AmbientOcclusion = texture(ssao, TexCoords).r;
 
     switch(gbuffer_display_mode)
@@ -48,10 +47,10 @@ void main()
             FragColor = vec4(Diffuse, 1.0);
         break;
         case GBUFFER_SPECULAR:
-            FragColor = vec4(Specular, Specular, Specular, 1.0);
+            FragColor = vec4(vec3(Specular), 1.0);
         break;
         case GBUFFER_SSAO:
-            FragColor = vec4(AmbientOcclusion, AmbientOcclusion, AmbientOcclusion, 1.0);
+            FragColor = vec4(vec3(AmbientOcclusion), 1.0);
         break;
         default:
         {
@@ -84,6 +83,4 @@ void main()
         }
         break;
     }
-
-
 }
