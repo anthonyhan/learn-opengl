@@ -25,11 +25,11 @@ const unsigned int SCR_HEIGHT = 768;
 typedef struct ui_params
 {
 	int gbuffer_display_mode = 0;
-	//bool light_show_position = true;
 	bool light_attenuation = true;
 	int kernel_size = 64;
 	float kernel_radius = 0.5f;
 	float kernel_bias = 0.025f;
+	glm::vec3 dir;
 } ui_params;
 
 
