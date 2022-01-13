@@ -59,7 +59,7 @@ set(CHAPTERS
     3.model_loading
     4.advanced_opengl
     5.advanced_lighting
-#    6.pbr
+    6.pbr
 #    7.in_practice
 )
 
@@ -174,10 +174,10 @@ set(5.advanced_lighting
 )
 
 set(6.pbr
-#    1.1.lighting
-#    1.2.lighting_textured
-#    2.1.1.ibl_irradiance_conversion
-#    2.1.2.ibl_irradiance
+    1.1.lighting
+    1.2.lighting_textured
+    2.1.1.ibl_irradiance_conversion
+    2.1.2.ibl_irradiance
 #    2.2.1.ibl_specular
 #    2.2.2.ibl_specular_textured
 )
