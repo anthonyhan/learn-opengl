@@ -139,17 +139,7 @@ int main()
 
 	// load PBR material textures
 	// --------------------------
-	// rusted iron
-	unsigned int ironAlbedoMap = loadTexture2(FileSystem::getPath("res/textures/pbr/rusted_iron/albedo.png").c_str());
-	unsigned int ironNormalMap = loadTexture2(FileSystem::getPath("res/textures/pbr/rusted_iron/normal.png").c_str());
-	unsigned int ironMetallicMap = loadTexture2(FileSystem::getPath("res/textures/pbr/rusted_iron/metallic.png").c_str());
-	unsigned int ironRoughnessMap = loadTexture2(FileSystem::getPath("res/textures/pbr/rusted_iron/roughness.png").c_str());
-	unsigned int ironAOMap = loadTexture2(FileSystem::getPath("res/textures/pbr/rusted_iron/ao.png").c_str());
-
-	// load PBR material textures
-	// --------------------------
-
-	/*
+	
 	// rusted iron
 	ibl_material ibl_mat_iron;
 	loadIBLMaterial(&ibl_mat_iron, "res/textures/pbr/rusted_iron");
@@ -171,7 +161,6 @@ int main()
 	loadIBLMaterial(&ibl_mat_wall, "res/textures/pbr/wall");
 
 	ibl_material ibl_materials[5] = { ibl_mat_iron, ibl_mat_gold, ibl_mat_grass, ibl_mat_plastic, ibl_mat_wall };
-	*/
 
 
 	// lights
@@ -421,43 +410,18 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
-		// rusted iron
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, ironAlbedoMap);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, ironNormalMap);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, ironMetallicMap);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, ironRoughnessMap);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, ironAOMap);
-
+		// ibl spheres
+		unsigned int mat_size = sizeof(ibl_materials) / sizeof(ibl_material);
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-5.0, 0.0, 2.0));
-		pbrShader.setMat4("model", model);
-		renderSphere();
-
-		/*
-		// render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
-		glm::mat4 model = glm::mat4(1.0f);
-		for (int row = 0; row < nrRows; ++row)
+		float rorate_angle = glm::radians(glfwGetTime() * 50.0f);
+		for (unsigned int i = 0; i < mat_size; ++i)
 		{
-			for (int col = 0; col < nrColumns; ++col)
-			{
-				model = glm::mat4(1.0f);
-				model = glm::translate(model, glm::vec3(
-					(col - (nrColumns / 2)) * spacing,
-					(row - (nrRows / 2)) * spacing,
-					0.0f
-				));
-				pbrShader.setMat4("model", model);
-
-				//renderSphereTextured(&ibl_materials[row]);
-				renderSphereTextured(&ibl_mat_iron);
-			}
+			model = glm::translate(glm::mat4(1.0f), glm::vec3(2.5 * i, 0.0, 0.0));
+			model = glm::rotate(model, rorate_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+			pbrShader.setMat4("model", model);
+			renderSphereTextured(&ibl_materials[i]);
 		}
-		*/
 
 		// render light source (simply re-render sphere at light positions)
 		// this looks a bit off as we use the same shader, but it'll make their positions obvious and 
@@ -789,6 +753,7 @@ unsigned int loadTexture(char const* path, bool hdr/* = false*/)
 
 	int width, height, nrComponents;
 	void* data = hdr ? (void*)stbi_loadf(FileSystem::getPath(path).data(), &width, &height, &nrComponents, 0) : (void*)stbi_load(FileSystem::getPath(path).data(), &width, &height, &nrComponents, 0);
+
 	if (data)
 	{
 		glBindTexture(GL_TEXTURE_2D, textureID);
@@ -894,7 +859,7 @@ void renderSphereTextured(ibl_material* ibl_tex)
 	glActiveTexture(GL_TEXTURE7);
 	glBindTexture(GL_TEXTURE_2D, ibl_tex->ao);
 
-	//renderSphere();
+	renderSphere();
 }
 
 void imgui_on_init(GLFWwindow* window)
