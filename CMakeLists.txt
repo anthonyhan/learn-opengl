@@ -180,6 +180,7 @@ set(6.pbr
     2.1.2.ibl_irradiance
     2.2.1.ibl_specular
     2.2.2.ibl_specular_textured
+    2.2.3.ibl_specular_model
 )
 
 set(7.in_practice

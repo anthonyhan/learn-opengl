@@ -23,9 +23,10 @@ public:
 
 	std::vector<Mesh> meshes;
 	bool gammaCorrection;
+	bool hdrTexture;
 
 public:
-	Model(const std::string&path, bool gamma = false) : gammaCorrection(gamma)
+	Model(const std::string&path, bool gamma = false, bool hdr = false) : gammaCorrection(gamma), hdrTexture(hdr)
     {
         loadModel(path);
     }
@@ -140,7 +141,7 @@ private:
 			// diffuse: texture_diffuseN
 			// specular: texture_specularN
 			// normal: texture_normalN
-
+			
 			// 1. diffuse maps
 			std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
@@ -181,7 +182,7 @@ private:
 			if (!skip)
 			{
 				Texture texture;
-				texture.id = TextureFromFile(str.C_Str(), directory, gammaCorrection);
+				texture.id = TextureFromFile(str.C_Str(), directory, gammaCorrection, hdrTexture);
 				texture.type = typeName;
 				texture.path = str.C_Str();
 				textures.push_back(texture);
@@ -193,7 +194,7 @@ private:
 		return textures;
 	}
 
-	static unsigned int TextureFromFile(const char* path, const std::string& directory, bool gammaCorrection = false)
+	static unsigned int TextureFromFile(const char* path, const std::string& directory, bool gammaCorrection = false, bool hdr = false)
 	{
 		std::string filename(path);
 		filename = directory + '/' + filename;
@@ -202,34 +203,48 @@ private:
 		glGenTextures(1, &textureID);
 
 		int width, height, nrComponents;
-		unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+		void* data = hdr ? (void*)stbi_loadf(filename.c_str(), &width, &height, &nrComponents, 0) : (void*)stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
 		if (data)
 		{
-			GLenum internalFormat;
-			GLenum dataFormat;
-			if (nrComponents == 1)
-			{
-				internalFormat = dataFormat = GL_RED;
-			}
-			else if (nrComponents == 3)
-			{
-				internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
-				dataFormat = GL_RGB;
-			}
-			else if (nrComponents == 4)
-			{
-				internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
-				dataFormat = GL_RGBA;
-			}
-
 			glBindTexture(GL_TEXTURE_2D, textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			if (hdr)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+			else
+			{
+				GLenum internalFormat;
+				GLenum dataFormat;
+				if (nrComponents == 1)
+				{
+					internalFormat = dataFormat = GL_RED;
+				}
+				else if (nrComponents == 3)
+				{
+					internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+					dataFormat = GL_RGB;
+				}
+				else if (nrComponents == 4)
+				{
+					internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+					dataFormat = GL_RGBA;
+				}
+
+				glBindTexture(GL_TEXTURE_2D, textureID);
+				glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+				glGenerateMipmap(GL_TEXTURE_2D);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
 
 			stbi_image_free(data);
 		}
