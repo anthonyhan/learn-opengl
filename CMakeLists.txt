@@ -179,7 +179,7 @@ set(6.pbr
     2.1.1.ibl_irradiance_conversion
     2.1.2.ibl_irradiance
     2.2.1.ibl_specular
-#    2.2.2.ibl_specular_textured
+    2.2.2.ibl_specular_textured
 )
 
 set(7.in_practice
