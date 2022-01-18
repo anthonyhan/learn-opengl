@@ -11,6 +11,7 @@
 #include <learnopengl/shader.h>
 #include <learnopengl/camera.h>
 #include <learnopengl/model.h>
+#include <learnopengl/mesh.h>
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -40,8 +41,7 @@ void renderCube();
 void renderSphere();
 void renderQuad();
 unsigned int loadTexture(const char* path, bool hdr = false);
-unsigned int loadTexture2(const char* path);
-void renderSphereTextured(ibl_material* ibl_tex);
+void renderPBRModel(Model* model, ibl_material* ibl_tex, Shader* shader);
 
 void imgui_on_init(GLFWwindow* window);
 void imgui_on_render(ui_params& param);
@@ -137,12 +137,10 @@ int main()
 	backgroundShader.use();
 	backgroundShader.setInt("environmentMap", 0);
 
-	unsigned int ironAlbedoMap = loadTexture("res/objects/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga");
-	unsigned int ironNormalMap = loadTexture("res/objects/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga");
-	unsigned int ironMetallicMap = loadTexture("res/objects/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga");
-	unsigned int ironRoughnessMap = loadTexture("res/objects/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga");
-	unsigned int ironAOMap = loadTexture("res/objects/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga");
+	ibl_material ibl_mat;
+	loadIBLMaterial(&ibl_mat, "res/objects/Cerberus_by_Andrew_Maximov");
 
+	// NOTE: pbrModel will also load the textures it use. Not a good approach, just for demostration.
 	// load PBR model
 	Model pbrModel = Model(FileSystem::getPath("res/objects/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"), false, true);
 
@@ -393,24 +391,11 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, ironAlbedoMap);
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, ironNormalMap);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, ironMetallicMap);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, ironRoughnessMap);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, ironAOMap);
-
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-5.0, 0.0, 2.0));
 		pbrShader.setMat4("model", model);
-		//renderSphere();
 		
-
-		// ibl spheres
+		// ibl model
 		model = glm::mat4(1.0f);
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -418,9 +403,7 @@ int main()
 		//model = glm::rotate(model, rorate_angle, glm::vec3(1.0f, 0.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.25f));
 		pbrShader.setMat4("model", model);
-		pbrModel.Draw(pbrShader);
-
-
+		renderPBRModel(&pbrModel, &ibl_mat, &pbrShader);
 
 
 		// render light source (simply re-render sphere at light positions)
@@ -797,55 +780,16 @@ unsigned int loadTexture(char const* path, bool hdr/* = false*/)
 	return textureID;
 }
 
-// utility function for loading a 2D texture from file
-// ---------------------------------------------------
-unsigned int loadTexture2(char const* path)
-{
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-
-	int width, height, nrComponents;
-	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-	if (data)
-	{
-		GLenum format;
-		if (nrComponents == 1)
-			format = GL_RED;
-		else if (nrComponents == 3)
-			format = GL_RGB;
-		else if (nrComponents == 4)
-			format = GL_RGBA;
-
-		glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		stbi_image_free(data);
-	}
-	else
-	{
-		std::cout << "Texture failed to load at path: " << path << std::endl;
-		stbi_image_free(data);
-	}
-
-	return textureID;
-}
-
 void loadIBLMaterial(ibl_material* ibl_tex, const char* dir)
 {
-	ibl_tex->albedo = loadTexture(std::string(dir).append("/albedo.png").c_str());
-	ibl_tex->normal = loadTexture(std::string(dir).append("/normal.png").c_str());
-	ibl_tex->metallic = loadTexture(std::string(dir).append("/metallic.png").c_str());
-	ibl_tex->roughness = loadTexture(std::string(dir).append("/roughness.png").c_str());
-	ibl_tex->ao = loadTexture(std::string(dir).append("/ao.png").c_str());
+	ibl_tex->albedo = loadTexture(std::string(dir).append("/Textures/Cerberus_A.tga").c_str());
+	ibl_tex->normal = loadTexture(std::string(dir).append("/Textures/Cerberus_N.tga").c_str());
+	ibl_tex->metallic = loadTexture(std::string(dir).append("/Textures/Cerberus_M.tga").c_str());
+	ibl_tex->roughness = loadTexture(std::string(dir).append("/Textures/Cerberus_R.tga").c_str());
+	ibl_tex->ao = loadTexture(std::string(dir).append("/Textures/Cerberus_AO.png").c_str());
 }
 
-void renderSphereTextured(ibl_material* ibl_tex)
+void renderPBRModel(Model* model, ibl_material* ibl_tex, Shader* shader)
 {
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, ibl_tex->albedo);
@@ -858,7 +802,16 @@ void renderSphereTextured(ibl_material* ibl_tex)
 	glActiveTexture(GL_TEXTURE7);
 	glBindTexture(GL_TEXTURE_2D, ibl_tex->ao);
 
-	renderSphere();
+	unsigned int mesh_size = model->meshes.size();
+	for (unsigned int i = 0; i < mesh_size; i++)
+	{
+		Mesh& mesh = model->meshes[i];
+		
+		// draw mesh
+		glBindVertexArray(mesh.VAO);
+		glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
 }
 
 void imgui_on_init(GLFWwindow* window)

@@ -20,8 +20,6 @@ uniform sampler2D brdfLUT;
 uniform vec3 lightPositions[4];
 uniform vec3 lightColors[4];
 
-uniform sampler2D texture_diffuse1;
-
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
